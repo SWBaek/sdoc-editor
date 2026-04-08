@@ -79,18 +79,20 @@ export async function exportToSlides(context: vscode.ExtensionContext) {
     // Load bundled fonts as base64
     const fontsDir = path.join(context.extensionPath, 'media', 'fonts');
     const BUNDLED_FONTS = [
-      { file: 'LGSmHaTL.ttf', weight: 300 },
-      { file: 'LGSmHaTR.ttf', weight: 400 },
-      { file: 'LGSmHaTSB.ttf', weight: 600 },
-      { file: 'LGSmHaTB.ttf', weight: 700 },
+      { file: 'LGSmHaTL.woff2', weight: 300 },
+      { file: 'LGSmHaTR.woff2', weight: 400 },
+      { file: 'LGSmHaTSB.woff2', weight: 600 },
+      { file: 'LGSmHaTB.woff2', weight: 700 },
     ];
+    const usedWeights = new Set(Object.values(theme.fontWeights));
     const embeddedFonts: { weight: number; dataUri: string }[] = [];
     for (const f of BUNDLED_FONTS) {
+      if (!usedWeights.has(f.weight)) continue;
       try {
         const fontPath = path.join(fontsDir, f.file);
         const fontData = await vscode.workspace.fs.readFile(vscode.Uri.file(fontPath));
         const b64 = Buffer.from(fontData).toString('base64');
-        embeddedFonts.push({ weight: f.weight, dataUri: `data:font/ttf;base64,${b64}` });
+        embeddedFonts.push({ weight: f.weight, dataUri: `data:font/woff2;base64,${b64}` });
       } catch { /* skip */ }
     }
     (theme as any).embeddedFonts = embeddedFonts;

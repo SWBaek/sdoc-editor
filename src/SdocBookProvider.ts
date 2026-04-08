@@ -218,8 +218,9 @@ export class SdocBookProvider implements vscode.CustomTextEditorProvider {
       },
     };
 
-    // Embed bundled fonts as base64 for HTML/PDF export
-    theme.embeddedFonts = await this.loadBundledFontsAsBase64();
+    // Embed only used font weights as base64 for HTML/PDF export
+    const usedWeights = new Set(Object.values(theme.fontWeights as Record<string, number>));
+    theme.embeddedFonts = await this.loadBundledFontsAsBase64(usedWeights);
 
     const exportSettings: Record<string, any> = {
       imageCaptionPrefix: config.get<string>('caption.imagePrefix', 'Image'),
@@ -437,10 +438,10 @@ export class SdocBookProvider implements vscode.CustomTextEditorProvider {
   }
 
   private static readonly BUNDLED_FONTS = [
-    { file: 'LGSmHaTL.ttf', weight: 300 },
-    { file: 'LGSmHaTR.ttf', weight: 400 },
-    { file: 'LGSmHaTSB.ttf', weight: 600 },
-    { file: 'LGSmHaTB.ttf', weight: 700 },
+    { file: 'LGSmHaTL.woff2', weight: 300 },
+    { file: 'LGSmHaTR.woff2', weight: 400 },
+    { file: 'LGSmHaTSB.woff2', weight: 600 },
+    { file: 'LGSmHaTB.woff2', weight: 700 },
   ];
 
   private static readonly FONT_WEIGHT_MAP: Record<string, number> = {
@@ -451,14 +452,15 @@ export class SdocBookProvider implements vscode.CustomTextEditorProvider {
     return SdocBookProvider.FONT_WEIGHT_MAP[name] || 400;
   }
 
-  private async loadBundledFontsAsBase64(): Promise<{ weight: number; dataUri: string }[]> {
+  private async loadBundledFontsAsBase64(weights?: Set<number>): Promise<{ weight: number; dataUri: string }[]> {
     const results: { weight: number; dataUri: string }[] = [];
     for (const { file, weight } of SdocBookProvider.BUNDLED_FONTS) {
+      if (weights && !weights.has(weight)) continue;
       try {
         const fontPath = path.join(this.context.extensionPath, 'media', 'fonts', file);
         const fontData = await fs.promises.readFile(fontPath);
         const base64 = fontData.toString('base64');
-        results.push({ weight, dataUri: `data:font/ttf;base64,${base64}` });
+        results.push({ weight, dataUri: `data:font/woff2;base64,${base64}` });
       } catch {
         // Skip missing font files
       }
