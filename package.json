@@ -418,7 +418,7 @@
   "devDependencies": {
     "@types/node": "^26.1.1",
     "@types/vscode": "^1.85.0",
-    "@typescript-eslint/eslint-plugin": "^8.64.0",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.64.0",
     "@vscode/vsce": "3.9.2",
     "esbuild": "^0.28.1",
@@ -428,7 +428,7 @@
     "highlight.js": "^11.11.1",
     "npm-run-all2": "^9.0.2",
     "prettier": "^3.9.5",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   },
   "dependencies": {
