@@ -270,9 +270,8 @@ fn classify_ipv6(address: Ipv6Addr) -> AddressClass {
         AddressClass::AlwaysBlocked
     } else if address.is_loopback() {
         AddressClass::Loopback
-    } else if in_range("fc00::".parse().unwrap(), 7) {
-        AddressClass::Private
-    } else if in_range("64:ff9b:1::".parse().unwrap(), 48) {
+    } else if in_range("fc00::".parse().unwrap(), 7) || in_range("64:ff9b:1::".parse().unwrap(), 48)
+    {
         AddressClass::Private
     } else if in_range("64:ff9b::".parse().unwrap(), 96) {
         translated_ipv4(0)
