@@ -97,6 +97,32 @@ describe('Kroki renderer', () => {
     expect(requests).toBe(1);
   });
 
+  it('invalidates cached renders when the private-network trust setting changes', async () => {
+    let requests = 0;
+    const server = createServer((_request, response) => {
+      requests += 1;
+      response.writeHead(200, { 'content-type': 'image/png' });
+      response.end(PNG_1X1);
+    });
+    servers.push(server);
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing test server address');
+
+    const endpoint = `http://127.0.0.1:${address.port}`;
+    const service = new KrokiDiagramService({
+      enabled: true,
+      endpoint,
+      allowPrivateNetwork: false,
+    });
+    await service.render('d2', 'a -> b');
+    service.updateSettings({ enabled: true, endpoint, allowPrivateNetwork: true });
+    await service.render('d2', 'a -> b');
+
+    expect(requests).toBe(2);
+  });
+
   it('rejects redirects, oversized input, wrong MIME, invalid PNG, and excessive pixels', async () => {
     const handlers = [
       (_request: unknown, response: import('node:http').ServerResponse) => {

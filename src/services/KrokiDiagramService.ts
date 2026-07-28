@@ -266,7 +266,12 @@ export class KrokiDiagramService {
   constructor(private settings: DiagramRendererSettings) {}
 
   updateSettings(settings: DiagramRendererSettings): void {
-    if (settings.endpoint !== this.settings.endpoint) this.clearCache();
+    if (
+      settings.endpoint !== this.settings.endpoint
+      || settings.allowPrivateNetwork !== this.settings.allowPrivateNetwork
+    ) {
+      this.clearCache();
+    }
     this.settings = settings;
   }
 

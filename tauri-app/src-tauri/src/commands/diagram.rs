@@ -309,7 +309,7 @@ async fn render_with_limits(
 ) -> Result<DiagramRenderResult, DiagramRenderError> {
     let endpoint =
         Url::parse(&settings.endpoint).map_err(|_| DiagramRenderError::invalid_endpoint())?;
-    let cache_key = cache_key(&endpoint, language, source);
+    let cache_key = cache_key(&endpoint, language, source, settings.allow_private_network);
     if let Some(cached) = state.cache.lock().unwrap().get(&cache_key) {
         return Ok(cached);
     }
@@ -327,13 +327,19 @@ async fn render_with_limits(
     Ok(result)
 }
 
-fn cache_key(endpoint: &Url, language: &str, source: &str) -> String {
+fn cache_key(endpoint: &Url, language: &str, source: &str, allow_private_network: bool) -> String {
     let mut digest = Sha256::new();
     digest.update(endpoint.as_str().as_bytes());
     digest.update(b"\0");
     digest.update(language.as_bytes());
     digest.update(b"\0");
     digest.update(source.as_bytes());
+    digest.update(b"\0");
+    digest.update(if allow_private_network {
+        b"private"
+    } else {
+        b"public"
+    });
     format!("{:x}", digest.finalize())
 }
 
@@ -526,10 +532,15 @@ fn validate_png(bytes: &[u8]) -> Result<(u32, u32), DiagramRenderError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        cache_key, validate_language, validate_png, DiagramCache, DiagramRenderResult,
-        MAX_CACHE_ENTRIES, PNG_SIGNATURE,
+        cache_key, post_diagram, run_registered_render, validate_language, validate_png,
+        DiagramCache, DiagramRenderResult, DiagramState, MAX_CACHE_ENTRIES, PNG_SIGNATURE,
     };
+    use crate::settings::DiagramRendererSettings;
     use reqwest::Url;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::thread;
+    use std::time::Duration;
 
     fn png_header(width: u32, height: u32) -> Vec<u8> {
         let mut bytes = Vec::from(PNG_SIGNATURE.as_slice());
@@ -541,6 +552,28 @@ mod tests {
         let crc = crc32fast::hash(&bytes[12..29]);
         bytes.extend_from_slice(&crc.to_be_bytes());
         bytes
+    }
+
+    fn serve_once(status: &str, content_type: &str, body: Vec<u8>, delay: Duration) -> Url {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let status = status.to_string();
+        let content_type = content_type.to_string();
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0_u8; 4096];
+            let _ = stream.read(&mut request);
+            if !delay.is_zero() {
+                thread::sleep(delay);
+            }
+            let headers = format!(
+                "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            let _ = stream.write_all(headers.as_bytes());
+            let _ = stream.write_all(&body);
+        });
+        Url::parse(&format!("http://{address}")).unwrap()
     }
 
     #[test]
@@ -582,12 +615,70 @@ mod tests {
     fn cache_key_separates_endpoint_language_and_source() {
         let endpoint = Url::parse("https://kroki.io").unwrap();
         assert_ne!(
-            cache_key(&endpoint, "d2", "x -> y"),
-            cache_key(&endpoint, "graphviz", "x -> y")
+            cache_key(&endpoint, "d2", "x -> y", false),
+            cache_key(&endpoint, "graphviz", "x -> y", false)
         );
         assert_ne!(
-            cache_key(&endpoint, "d2", "x -> y"),
-            cache_key(&endpoint, "d2", "x -> z")
+            cache_key(&endpoint, "d2", "x -> y", false),
+            cache_key(&endpoint, "d2", "x -> z", false)
         );
+        assert_ne!(
+            cache_key(&endpoint, "d2", "x -> y", false),
+            cache_key(&endpoint, "d2", "x -> y", true)
+        );
+    }
+
+    #[tokio::test]
+    async fn request_boundary_rejects_redirect_mime_and_declared_oversize() {
+        let redirect = serve_once("302 Found", "image/png", Vec::new(), Duration::ZERO);
+        let redirect_error = post_diagram(redirect, "d2", "a -> b", false)
+            .await
+            .unwrap_err();
+        assert_eq!(redirect_error.code, "redirect");
+
+        let wrong_mime = serve_once("200 OK", "text/plain", b"not png".to_vec(), Duration::ZERO);
+        let mime_error = post_diagram(wrong_mime, "graphviz", "digraph {}", false)
+            .await
+            .unwrap_err();
+        assert_eq!(mime_error.code, "invalid-response");
+
+        let oversized = serve_once(
+            "200 OK",
+            "image/png",
+            vec![0; super::RESPONSE_LIMIT + 1],
+            Duration::ZERO,
+        );
+        let size_error = post_diagram(oversized, "plantuml", "@startuml\n@enduml", false)
+            .await
+            .unwrap_err();
+        assert_eq!(size_error.code, "response-too-large");
+    }
+
+    #[tokio::test]
+    async fn registered_render_enforces_the_supplied_timeout() {
+        let endpoint = serve_once(
+            "200 OK",
+            "image/png",
+            png_header(1, 1),
+            Duration::from_millis(150),
+        );
+        let settings = DiagramRendererSettings {
+            enabled: true,
+            endpoint: endpoint.to_string(),
+            allow_private_network: false,
+        };
+        let state = DiagramState::default();
+        let error = run_registered_render(
+            "timeout-test",
+            "d2",
+            "a -> b",
+            settings,
+            Duration::from_millis(20),
+            &state,
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(error.code, "timeout");
+        assert!(error.retryable);
     }
 }

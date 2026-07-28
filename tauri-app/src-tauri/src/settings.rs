@@ -220,10 +220,7 @@ fn classify_ipv4(address: Ipv4Addr) -> AddressClass {
         value & mask == u32::from(network) & mask
     };
 
-    if matches!(
-        address,
-        Ipv4Addr::new(100, 100, 100, 200) | Ipv4Addr::new(168, 63, 129, 16)
-    ) {
+    if address == Ipv4Addr::new(100, 100, 100, 200) || address == Ipv4Addr::new(168, 63, 129, 16) {
         AddressClass::AlwaysBlocked
     } else if in_range(Ipv4Addr::new(127, 0, 0, 0), 8) {
         AddressClass::Loopback
@@ -269,7 +266,7 @@ fn classify_ipv6(address: Ipv6Addr) -> AddressClass {
         classify_ipv4(Ipv4Addr::from(embedded))
     };
 
-    if address == "fd00:ec2::254".parse().unwrap() {
+    if address == "fd00:ec2::254".parse::<Ipv6Addr>().unwrap() {
         AddressClass::AlwaysBlocked
     } else if address.is_loopback() {
         AddressClass::Loopback

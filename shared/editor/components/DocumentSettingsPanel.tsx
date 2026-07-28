@@ -426,6 +426,7 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
             <input
               type="checkbox"
               className="settings-toggle"
+              aria-label={t('settings.decoration')}
               checked={displaySettings.headingDecoration}
               onChange={(event) => updateField('headingDecoration', event.target.checked)}
             />
@@ -506,6 +507,7 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
             <input
               type="checkbox"
               className="settings-toggle"
+              aria-label={t('settings.headingNumbering')}
               checked={displaySettings.headingNumbering}
               onChange={(event) => updateField('headingNumbering', event.target.checked)}
             />
@@ -515,6 +517,7 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
             <select
               className="settings-select"
               style={controlStyle}
+              aria-label={t('settings.captionStyle')}
               value={displaySettings.captionStyle}
               onChange={(event) => updateField('captionStyle', event.target.value as CaptionStyleName)}
             >
@@ -558,6 +561,7 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
             <input
               type="checkbox"
               className="settings-toggle"
+              aria-label={t('settings.includeCaptionCrossRef')}
               checked={displaySettings.crossRefIncludeCaption}
               onChange={(event) => updateField('crossRefIncludeCaption', event.target.checked)}
             />
@@ -574,6 +578,7 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
             <DeferredTextInput
               value={draftDocSettings?.outputDir ?? displaySettings.outputDir}
               placeholder="./export"
+              ariaLabel={t('settings.outputFolder')}
               onCommit={(value) => handleTextFieldCommit('outputDir', value)}
             />
           </div>
@@ -586,6 +591,7 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
             <select
               className="settings-select"
               style={controlStyle}
+              aria-label={t('settings.htmlEmbedding')}
               value={draftDocSettings?.selfContained ?? displaySettings.selfContained}
               onChange={(event) => updateField('selfContained', event.target.value as SelfContainedMode)}
             >
@@ -603,6 +609,7 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
               type="number"
               className="settings-number-input"
               style={controlStyle}
+              aria-label={t('settings.pdfScale')}
               min={10}
               max={200}
               step={5}
@@ -625,6 +632,7 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
             <select
               className="settings-select"
               style={controlStyle}
+              aria-label={t('settings.slideSplit')}
               value={draftDocSettings?.slideBreakLevel ?? displaySettings.slideBreakLevel}
               onChange={(event) => updateField('slideBreakLevel', event.target.value as SlideBreakLevel)}
             >
@@ -638,6 +646,7 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
             <input
               type="checkbox"
               className="settings-toggle"
+              aria-label={t('settings.titleSlide')}
               checked={draftDocSettings?.showTitleSlide ?? displaySettings.showTitleSlide}
               onChange={(event) => updateField('showTitleSlide', event.target.checked)}
             />
@@ -647,6 +656,7 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
             <select
               className="settings-select"
               style={controlStyle}
+              aria-label={t('settings.transition')}
               value={draftDocSettings?.slideTransition ?? displaySettings.slideTransition}
               onChange={(event) => updateField('slideTransition', event.target.value as SlideTransition)}
             >
@@ -697,6 +707,7 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
                   <DeferredTextInput
                     value={cssPath ?? ''}
                     placeholder={placeholder}
+                    ariaLabel={label}
                     onCommit={(value) => handleTextFieldCommit(pathKey, value)}
                   />
                 )}
