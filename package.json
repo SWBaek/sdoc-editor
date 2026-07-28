@@ -29,6 +29,10 @@
     "Other"
   ],
   "main": "./dist/extension.js",
+  "activationEvents": [
+    "onCustomEditor:structuredDocEditor.sdoc",
+    "onCustomEditor:structuredDocEditor.sdocBook"
+  ],
   "contributes": {
     "customEditors": [
       {
