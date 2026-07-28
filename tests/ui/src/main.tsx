@@ -114,18 +114,19 @@ function ActualTable({ columns, locale }: { columns: number; locale: Locale }) {
 
 function PanelFixture({ locale }: { locale: Locale }) {
   const [open, setOpen] = useState(true);
-  if (!open) return <button type="button" data-testid="panel-return-target">Background action</button>;
+  const returnFocusRef = React.useRef<HTMLButtonElement | null>(null);
   return (
     <>
-      <button type="button" data-testid="panel-background-action">Background action</button>
-      <ResponsiveSidePanel
+      <button ref={returnFocusRef} type="button" data-testid="panel-return-target">Background action</button>
+      {open && <ResponsiveSidePanel
         title={locale === 'ko' ? '문서 설정' : 'Document settings'}
         closeLabel={locale === 'ko' ? '문서 패널 닫기' : 'Close document panel'}
         onClose={() => setOpen(false)}
+        returnFocusRef={returnFocusRef}
       >
         <button type="button">First panel action</button>
         <button type="button">Last panel action</button>
-      </ResponsiveSidePanel>
+      </ResponsiveSidePanel>}
     </>
   );
 }

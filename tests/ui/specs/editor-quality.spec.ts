@@ -161,6 +161,22 @@ test.describe('responsive toolbar contract', () => {
       await expect(trigger).toBeFocused();
     });
   }
+
+  test('Heading popup supports roving focus, Escape, and trigger restoration', async ({ page }) => {
+    await openFixture(page, { width: 1280, locale: 'en' });
+    const trigger = page.getByRole('button', { name: 'Heading', exact: true });
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const menu = page.getByRole('menu', { name: 'Heading level', exact: true });
+    await expect(menu).toBeVisible();
+    const items = menu.getByRole('menuitemradio');
+    await expect(items.first()).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(items.nth(1)).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
 });
 
 test.describe('table behavior', () => {
@@ -191,6 +207,43 @@ test.describe('table behavior', () => {
 });
 
 test.describe('responsive side panel contract', () => {
+  for (const width of [800, 1024]) {
+    test(`${width}px uses the overlay contract without horizontal overflow`, async ({ page }) => {
+      await openFixture(page, {
+        width,
+        host: 'vscode',
+        theme: 'dark',
+        locale: 'en',
+        panel: true,
+      });
+      const panel = page.getByRole('dialog');
+      await expect(panel).toBeVisible();
+      const overflow = await panel.evaluate((element) =>
+        element.scrollWidth - element.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(1);
+    });
+  }
+
+  test('1440px uses a docked complementary panel', async ({ page }) => {
+    await openFixture(page, {
+      width: 1440,
+      host: 'tauri',
+      theme: 'light',
+      locale: 'ko',
+      panel: true,
+    });
+    const panel = page.getByRole('complementary');
+    await expect(panel).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    const metrics = await panel.evaluate((element) => ({
+      width: element.getBoundingClientRect().width,
+      overflow: element.scrollWidth - element.clientWidth,
+    }));
+    expect(metrics.width).toBeGreaterThanOrEqual(320);
+    expect(metrics.width).toBeLessThanOrEqual(380);
+    expect(metrics.overflow).toBeLessThanOrEqual(1);
+  });
+
   test('narrow overlay is modal, traps focus, and closes with Escape', async ({ page }) => {
     await openFixture(page, { width: 480, locale: 'en', panel: true });
     const panel = page.getByRole('dialog', { name: 'Document settings' });
@@ -204,11 +257,12 @@ test.describe('responsive side panel contract', () => {
     await expect(close).toBeFocused();
     await page.keyboard.press('Shift+Tab');
     await expect(last).toBeFocused();
-    await expect(page.getByTestId('panel-background-action')).not.toBeFocused();
+    await expect(page.getByTestId('panel-return-target')).not.toBeFocused();
 
     await page.keyboard.press('Escape');
     await expect(panel).toBeHidden();
     await expect(page.getByTestId('panel-return-target')).toBeVisible();
+    await expect(page.getByTestId('panel-return-target')).toBeFocused();
   });
 });
 
