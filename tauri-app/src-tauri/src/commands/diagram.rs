@@ -335,11 +335,7 @@ fn cache_key(endpoint: &Url, language: &str, source: &str, allow_private_network
     digest.update(b"\0");
     digest.update(source.as_bytes());
     digest.update(b"\0");
-    digest.update(if allow_private_network {
-        b"private"
-    } else {
-        b"public"
-    });
+    digest.update([u8::from(allow_private_network)]);
     format!("{:x}", digest.finalize())
 }
 
