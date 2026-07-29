@@ -30,11 +30,6 @@ describe('editor host message boundary', () => {
       documentId: 'doc-a',
       focused: true,
     })).toBe(true);
-    expect(isHostToEditorMessage({
-      type: 'toggleBold',
-      sessionId: 'session-1',
-      documentId: 'doc-a',
-    })).toBe(true);
     expect(isEditorToHostMessage({
       type: 'edit',
       sessionId: 'session-1',
@@ -76,10 +71,6 @@ describe('editor host message boundary', () => {
     expect(isEditorToHostMessage({
       type: 'editorTextFocusChanged',
       focused: true,
-    })).toBe(false);
-    expect(isHostToEditorMessage({
-      type: 'toggleBold',
-      sessionId: 'session-1',
     })).toBe(false);
     expect(isEditorToHostMessage({
       type: 'edit',

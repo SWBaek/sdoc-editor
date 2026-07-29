@@ -19,7 +19,6 @@ import {
 import type { DocumentSettings, CaptionStyleName, SdocMeta, TiptapNode } from '../shared/types';
 import type {
   EditorToHostMessage,
-  HostToEditorMessage,
   PersonalTemplateOperation,
 } from '../shared/types/messages';
 import { isEditorToHostMessage } from '../shared/types/messageGuards';
@@ -100,7 +99,10 @@ export class SdocEditorProvider implements vscode.CustomTextEditorProvider {
     );
     const toggleBoldRegistration = vscode.commands.registerCommand(
       SdocEditorProvider.TOGGLE_BOLD_COMMAND,
-      () => provider.toggleBold(),
+      // Winning VS Code's keybinding resolution prevents the workbench sidebar
+      // command. The original DOM keyboard event still reaches ProseMirror,
+      // which owns the single document mutation and preserves its selection.
+      () => undefined,
     );
     return vscode.Disposable.from(
       providerRegistration,
@@ -170,23 +172,6 @@ export class SdocEditorProvider implements vscode.CustomTextEditorProvider {
     if (this.editorTextFocus.release(panel, identity)) {
       this.setEditorTextFocusContext(false);
     }
-  }
-
-  private async toggleBold(): Promise<void> {
-    const lease = this.editorTextFocus.currentLease;
-    if (!lease?.owner.active) return;
-    const session = this.editorSessions.get(lease.documentId);
-    if (!session
-      || session.panel !== lease.owner
-      || session.sessionId !== lease.sessionId
-      || session.document.uri.toString() !== lease.documentId) return;
-
-    const message: HostToEditorMessage = {
-      type: 'toggleBold',
-      sessionId: lease.sessionId,
-      documentId: lease.documentId,
-    };
-    await session.panel.webview.postMessage(message);
   }
 
   private dispose(): void {

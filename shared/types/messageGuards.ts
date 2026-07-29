@@ -208,8 +208,6 @@ export function isHostToEditorMessage(value: unknown): value is HostToEditorMess
   switch (value.type) {
     case 'showJsonViewer':
       return true;
-    case 'toggleBold':
-      return hasString(value, 'sessionId') && hasString(value, 'documentId');
     case 'templateApplicationFinished':
       return hasString(value, 'requestId')
         && ['applied', 'cancelled', 'failed'].includes(String(value.result));
