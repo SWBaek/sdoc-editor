@@ -104,6 +104,14 @@
         "when": "activeCustomEditorId == structuredDocEditor.sdoc && focusedCustomEditorIsEditable && structuredDocEditor.editorTextFocus"
       }
     ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "structuredDocEditor.toggleBold",
+          "when": "false"
+        }
+      ]
+    },
     "configuration": {
       "title": "Structured Doc Editor",
       "properties": {

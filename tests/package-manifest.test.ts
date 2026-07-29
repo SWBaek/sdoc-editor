@@ -53,5 +53,11 @@ describe('VS Code package manifest', () => {
         when: 'activeCustomEditorId == structuredDocEditor.sdoc && focusedCustomEditorIsEditable && structuredDocEditor.editorTextFocus',
       },
     ]));
+    expect(manifest.contributes?.menus?.commandPalette).toEqual(expect.arrayContaining([
+      {
+        command: 'structuredDocEditor.toggleBold',
+        when: 'false',
+      },
+    ]));
   });
 });
