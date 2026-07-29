@@ -89,6 +89,19 @@
         "command": "structuredDocEditor.exportToSlides",
         "title": "Export to Slides",
         "category": "Structured Doc"
+      },
+      {
+        "command": "structuredDocEditor.toggleBold",
+        "title": "Toggle Bold",
+        "category": "Structured Doc"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "structuredDocEditor.toggleBold",
+        "key": "ctrl+b",
+        "mac": "cmd+b",
+        "when": "activeCustomEditorId == structuredDocEditor.sdoc && focusedCustomEditorIsEditable && structuredDocEditor.editorTextFocus"
       }
     ],
     "configuration": {

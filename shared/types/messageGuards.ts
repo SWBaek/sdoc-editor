@@ -121,6 +121,10 @@ export function isEditorToHostMessage(value: unknown): value is EditorToHostMess
     case 'insertExistingImage':
     case 'browseSdocFiles':
       return true;
+    case 'editorTextFocusChanged':
+      return hasString(value, 'sessionId')
+        && hasString(value, 'documentId')
+        && typeof value.focused === 'boolean';
     case 'requestTemplateCatalog':
       return hasString(value, 'requestId');
     case 'flushComplete':
@@ -204,6 +208,8 @@ export function isHostToEditorMessage(value: unknown): value is HostToEditorMess
   switch (value.type) {
     case 'showJsonViewer':
       return true;
+    case 'toggleBold':
+      return hasString(value, 'sessionId') && hasString(value, 'documentId');
     case 'templateApplicationFinished':
       return hasString(value, 'requestId')
         && ['applied', 'cancelled', 'failed'].includes(String(value.result));

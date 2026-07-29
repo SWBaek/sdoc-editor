@@ -238,6 +238,12 @@ export interface ShowJsonViewerMessage {
   type: 'showJsonViewer';
 }
 
+export interface ToggleBoldMessage {
+  type: 'toggleBold';
+  sessionId: string;
+  documentId: string;
+}
+
 export interface RequestFlushMessage {
   type: 'requestFlush';
   sessionId: string;
@@ -312,12 +318,20 @@ export type ExtensionToWebviewMessage =
   | DiagramRendererSettingsMessage
   | SdocFileBrowseResultMessage
   | ImportMarkdownTextMessage
-  | ShowJsonViewerMessage;
+  | ShowJsonViewerMessage
+  | ToggleBoldMessage;
 
 // ─── Webview → Extension Messages ───────────────────────────────
 
 export interface ReadyMessage {
   type: 'ready';
+}
+
+export interface EditorTextFocusChangedMessage {
+  type: 'editorTextFocusChanged';
+  sessionId: string;
+  documentId: string;
+  focused: boolean;
 }
 
 export interface UpdateUiLanguageMessage {
@@ -514,6 +528,7 @@ export interface ClearCssFileMessage {
 
 export type WebviewToExtensionMessage =
   | ReadyMessage
+  | EditorTextFocusChangedMessage
   | UpdateUiLanguageMessage
   | RequestTemplateCatalogMessage
   | ApplyTemplateMessage

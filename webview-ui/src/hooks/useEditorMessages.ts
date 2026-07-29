@@ -34,6 +34,7 @@ import {
 } from '@shared/persistence/externalChangeResolution';
 import type { EditorReplacementReason } from '@shared/editor/documentReplacement';
 import type { UiLanguagePreference } from '@shared/editor/i18n';
+import { tryToggleBoldFromHost } from '@shared/editor/editorCommands';
 
 export interface MetaState extends Partial<SdocMeta> {
   title: string;
@@ -160,6 +161,11 @@ export function useEditorMessages({
             detectedLanguage: message.locale,
           },
         });
+        break;
+      case 'toggleBold':
+        if (persistenceSessionRef.current?.sessionId !== message.sessionId
+          || persistenceSessionRef.current.documentId !== message.documentId) break;
+        tryToggleBoldFromHost(ed);
         break;
       case 'templateCatalog':
         if (message.requestId !== catalogRequestRef.current) break;
