@@ -172,6 +172,9 @@ describe('activity hubs and settings UI', () => {
 
     expect(settingsMarkup).toContain('Document appearance');
     expect(settingsMarkup).toContain('Numbering and references');
+    expect(settingsMarkup).toContain('Heading start number');
+    expect(settingsMarkup).toContain('type="number"');
+    expect(settingsMarkup).toContain('min="0"');
     expect(settingsMarkup).toContain('Advanced heading colors');
     expect(settingsMarkup).toContain('aria-expanded="false"');
     expect(settingsMarkup).toContain('Use host defaults');

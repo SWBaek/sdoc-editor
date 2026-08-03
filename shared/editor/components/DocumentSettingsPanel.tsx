@@ -166,6 +166,7 @@ const APPEARANCE_KEYS: ReadonlyArray<keyof DocumentSettings> = [
 ];
 const NUMBERING_KEYS: ReadonlyArray<keyof DocumentSettings> = [
   'headingNumbering',
+  'headingStartNumber',
   'captionStyle',
   'captionNumbering',
   'equationNumbering',
@@ -512,6 +513,23 @@ export const DocumentSettingsPanel: React.FC<DocumentSettingsPanelProps> = ({
               aria-label={t('settings.headingNumbering')}
               checked={displaySettings.headingNumbering}
               onChange={(event) => updateField('headingNumbering', event.target.checked)}
+            />
+          </div>
+          <div className="settings-row" style={rowStyle}>
+            <label className="settings-label" style={labelStyle}>{t('settings.headingStartNumber')}</label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              className="settings-text-input"
+              style={controlStyle}
+              aria-label={t('settings.headingStartNumber')}
+              value={displaySettings.headingStartNumber}
+              disabled={!displaySettings.headingNumbering}
+              onChange={(event) => {
+                const value = event.target.valueAsNumber;
+                if (Number.isInteger(value) && value >= 0) updateField('headingStartNumber', value);
+              }}
             />
           </div>
           <div className="settings-row" style={rowStyle}>
