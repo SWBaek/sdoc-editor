@@ -25,11 +25,18 @@ verification. Delegate only bounded work that can proceed independently.
    when source or test evidence is available.
 6. Run the applicable commands from `AGENTS.md`, inspect the final diff, and
    invoke the Grok CLI for an independent critical review of every material
-   implementation or substantive repository verification.
+   implementation or substantive repository verification. Put full diffs and
+   other long payloads in an OS temporary UTF-8 file and call the wrapper with
+   `-PromptFile`; never place them in shell arguments. Grok report validation
+   is enabled by default.
 7. Disposition each actionable Grok finding by accepting or rejecting it with
    local repository and test evidence, and remediate accepted findings. If
    reviewed files change materially, rerun the Grok critique before reporting
    completed work, verification, and residual risk.
+8. Treat exit code 0 plus an acknowledgement or intent statement as incomplete.
+   A valid critique must contain explicit ASCII `Conclusion` and `Findings`
+   headings or `NO_ACTIONABLE_FINDINGS`. Retry incomplete output with a bounded,
+   self-contained prompt and never report it as Grok review.
 
 ## Native agent roles
 

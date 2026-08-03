@@ -26,13 +26,36 @@ the shared working tree.
 
 ## Invocation
 
-From the repository root, run:
+For a short prompt, run from the repository root:
 
 ```powershell
 powershell.exe -NoProfile -File .agents/skills/orchestrate-sdoc-work/scripts/invoke-advisor.ps1 `
   -Provider grok `
   -Prompt "Review the book composition boundary for data-loss risks." `
   -WorkingDirectory $PWD
+```
+
+Never put a full diff or another long review payload in `-Prompt`, an inline
+PowerShell command, or a native process argument. Write it as UTF-8 without BOM
+to an OS temporary file, pass only its path, and delete that caller-owned file:
+
+```powershell
+$reviewPromptPath = Join-Path ([System.IO.Path]::GetTempPath()) (
+  'sdoc-review-{0}.txt' -f [System.Guid]::NewGuid().ToString('N')
+)
+try {
+  [System.IO.File]::WriteAllText(
+    $reviewPromptPath,
+    $reviewPrompt,
+    [System.Text.UTF8Encoding]::new($false)
+  )
+  powershell.exe -NoProfile -File .agents/skills/orchestrate-sdoc-work/scripts/invoke-advisor.ps1 `
+    -Provider grok `
+    -PromptFile $reviewPromptPath `
+    -WorkingDirectory $PWD
+} finally {
+  Remove-Item -LiteralPath $reviewPromptPath -Force -ErrorAction SilentlyContinue
+}
 ```
 
 Replace `grok` with `agy` as needed. Pass `-Model` only when the user selected a
@@ -43,7 +66,25 @@ the surrounding shell call its own finite timeout as a second guard. Use
 
 The wrapper uses plan or sandbox mode, asks for no file changes, and disables
 nested Grok agents. These are safeguards, not proof. Inspect `git status` after
-every external invocation.
+every external invocation. For Grok, the wrapper copies the complete advisory
+prompt to its own managed temporary UTF-8 file, passes it with `--prompt-file`,
+and deletes it in `finally`.
+
+Grok report validation is enabled by default. Exit code 0 alone does not prove
+that a review occurred. An acknowledgement such as “I will review” or an intent
+statement without both an explicit conclusion and findings (or the explicit
+`NO_ACTIONABLE_FINDINGS` result) is incomplete, must be retried, and must not
+count. `-AllowIncompleteResponse` is reserved for connectivity diagnostics and
+must never be used for a required critique.
+
+Required reports use the ASCII `Conclusion` and `Findings` headings so the
+PowerShell 5.1 wrapper can validate them without locale-dependent script
+encoding. `NO_ACTIONABLE_FINDINGS` is the complete no-findings alternative.
+
+The `-PromptFile` path also keeps a long task off the wrapper's own command
+line for agy, but agy still receives the advisory text through its native
+`--print` process argument. Keep agy prompts short unless its CLI gains an
+equivalent file-input mode; the Grok large-diff guarantee does not apply to agy.
 
 Run Grok only after the integrated change and local checks are stable. If a
 review finding leads to a material change in a reviewed file, rerun the Grok
