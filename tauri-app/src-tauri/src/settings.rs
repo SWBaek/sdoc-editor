@@ -51,7 +51,7 @@ impl<'de> Deserialize<'de> for DiagramRendererSettings {
         D: serde::Deserializer<'de>,
     {
         let wire = DiagramRendererSettingsWire::deserialize(deserializer)?;
-        let consent = wire.consent.unwrap_or_else(|| match wire.enabled {
+        let consent = wire.consent.unwrap_or(match wire.enabled {
             Some(true) => DiagramRendererConsent::Granted,
             Some(false) | None => DiagramRendererConsent::Undecided,
         });
