@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 :root {
+  --sdoc-radius-control: 4px;
+  --sdoc-radius-menu: 6px;
+  --sdoc-space-control: 8px;
+  --sdoc-space-panel: 12px;
+  --sdoc-font-ui: var(--vscode-font-size, 13px);
   font-family: var(--sdoc-font-sans);
   font-size: var(--vscode-font-size);
   font-weight: var(--vscode-font-weight);
@@ -52,6 +57,17 @@ samp {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+}
+
+.editor-loading {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  min-height: 0;
+  padding: var(--sdoc-space-panel);
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+  font-size: var(--sdoc-font-ui);
 }
 
 .ProseMirror {
@@ -299,6 +315,12 @@ samp {
 
 .ProseMirror li p {
   margin: 0;
+}
+
+.ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--vscode-panel-border);
+  margin: 1.25em 0;
 }
 
 /* Code blocks */
@@ -592,7 +614,7 @@ samp {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  margin-top: 4px;
+  margin-top: var(--sdoc-space-control);
   user-select: none;
 }
 
@@ -667,7 +689,7 @@ samp {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  margin-bottom: 4px;
+  margin-bottom: var(--sdoc-space-control);
   user-select: none;
 }
 
@@ -4026,19 +4048,19 @@ html.is-resizing-side-panel * {
   z-index: 1200;
   display: grid;
   place-items: center;
-  padding: 20px;
-  background: color-mix(in srgb, var(--sdoc-bg, #111827) 58%, transparent);
+  padding: var(--sdoc-space-panel);
+  background: color-mix(in srgb, var(--vscode-editor-background) 58%, transparent);
 }
 
 .template-dialog {
   max-height: min(680px, calc(100vh - 40px));
   overflow: auto;
-  padding: 20px;
-  border: 1px solid var(--sdoc-border, #d1d5db);
-  border-radius: 12px;
-  background: var(--sdoc-panel-bg, var(--sdoc-bg, #fff));
-  color: var(--sdoc-fg, inherit);
-  box-shadow: 0 24px 64px rgb(0 0 0 / 35%);
+  padding: var(--sdoc-space-panel);
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
+  border-radius: var(--sdoc-radius-menu);
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+  box-shadow: 0 24px 64px var(--vscode-widget-shadow, rgb(0 0 0 / 35%));
 }
 
 .template-dialog.modal-content--sm {
@@ -4077,24 +4099,43 @@ html.is-resizing-side-panel * {
 
 .template-dialog-error,
 .template-status [role="alert"] {
-  color: var(--sdoc-danger, #dc2626);
+  color: var(--vscode-errorForeground);
 }
 
 .template-dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--sdoc-space-control);
   margin-top: 18px;
 }
 
+.template-dialog-actions button {
+  min-height: 28px;
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--sdoc-radius-control);
+  color: var(--vscode-button-secondaryForeground);
+  background: var(--vscode-button-secondaryBackground);
+  font-size: var(--sdoc-font-ui);
+  cursor: pointer;
+}
+
+.template-dialog-actions button:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
 .template-dialog-actions .is-primary {
-  color: var(--sdoc-button-primary-fg, #fff);
-  background: var(--sdoc-accent, #2563eb);
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+.template-dialog-actions .is-primary:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
 }
 
 .template-dialog-actions .is-destructive {
-  color: #fff;
-  background: var(--sdoc-danger, #dc2626);
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-errorForeground);
 }
 
 .template-status:empty {

@@ -680,7 +680,7 @@ export const Editor: React.FC = () => {
 
   if (!editor) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
+      <div className="editor-loading" role="status">
         {t('editor.loading')}
       </div>
     );
