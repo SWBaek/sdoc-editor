@@ -851,6 +851,11 @@ samp {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
 }
 
+.toolbar-group:not([hidden]):not(.is-overflow-panel) ~ .toolbar-group:not([hidden]):not(.is-overflow-panel) {
+  border-left: 1px solid var(--vscode-panel-border);
+  padding-left: 4px;
+}
+
 .toolbar-button {
   background-color: var(--vscode-button-secondaryBackground);
   color: var(--vscode-button-secondaryForeground);
@@ -1813,7 +1818,21 @@ samp {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 1px;
+}
+
+/* Keep the 16px icon optically centered in the 32px toolbar hit target. */
+.toolbar-button.color-picker-btn {
+  position: relative;
+  gap: 0;
+}
+
+.toolbar-button.color-picker-btn .color-indicator {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* Browsable target list item (LinkDialog) */
@@ -2303,6 +2322,7 @@ samp {
   min-height: 0;
   overflow-y: auto;
   --editor-document-inset: 24px;
+  padding-bottom: 52px; /* last heading underline clears the floating zoom pill */
 }
 
 /* One reading column: shared inset + capped measure */
@@ -2323,11 +2343,16 @@ samp {
   }
 }
 
+/* Overlay panel covers the canvas; keep title + body readable to its right. */
+.editor-body-layout:has(.side-panel.is-overlay) .editor-scroll-area {
+  padding-left: min(var(--side-panel-default-width), max(0px, 100% - 12rem));
+}
+
 /* ===== Editor Zoom Bar (floating pill, bottom-right) ===== */
 .editor-zoom-bar {
   position: absolute;
-  bottom: 14px;
-  right: 18px;
+  bottom: 10px;
+  right: 16px;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -3802,6 +3827,7 @@ html.is-resizing-side-panel * {
 }
 
 .activity-bar-icon {
+  position: relative;
   width: 44px;
   height: auto;
   min-height: 40px;
@@ -3815,15 +3841,18 @@ html.is-resizing-side-panel * {
   color: var(--vscode-foreground);
   opacity: 0.65;
   border-radius: 4px;
-  padding: 5px 0;
+  padding: 8px 0;
   cursor: pointer;
   transition: opacity 0.1s, background 0.1s;
 }
 
 .activity-bar-label {
-  font-size: 9px;
-  line-height: 1;
-  letter-spacing: 0.02em;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
@@ -3834,8 +3863,29 @@ html.is-resizing-side-panel * {
 
 .activity-bar-icon.is-active {
   opacity: 1;
-  background: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
+  background: transparent;
+  color: var(--vscode-foreground);
+}
+
+.activity-bar-icon.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--vscode-focusBorder, #007acc);
+}
+
+.activity-bar-icon.is-active:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+}
+
+@media (forced-colors: active) {
+  .activity-bar-icon.is-active::before {
+    background: Highlight;
+  }
 }
 
 /* ===== Side Panel (4-tab) new elements ===== */
