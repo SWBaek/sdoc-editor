@@ -59,6 +59,7 @@ samp {
   color: var(--vscode-editor-foreground);
   font-family: var(--sdoc-font-sans);
   font-weight: var(--font-weight-body, 400);
+  line-height: 1.6;
   padding: 16px;
   padding-bottom: 40vh; /* 문서 하단 여백: 뷰포트 높이의 40% */
   min-height: 100%;
@@ -113,6 +114,8 @@ samp {
 }
 
 .show-numbering.show-heading-decoration .ProseMirror h1 {
+  display: table;
+  max-width: 100%;
   border-bottom: 2px solid var(--heading-h1-color, #2563EB);
 }
 
@@ -223,6 +226,8 @@ samp {
 }
 
 .hide-numbering.show-heading-decoration .ProseMirror h1 {
+  display: table;
+  max-width: 100%;
   border-bottom: 2px solid var(--heading-h1-color, #2563EB);
 }
 
@@ -258,6 +263,15 @@ samp {
   margin: 0.83em 0;
 }
 
+/* Body paragraph rhythm (Tailwind preflight zeros p margins) */
+.ProseMirror p {
+  margin-top: 0.85em;
+  margin-bottom: 0.85em;
+}
+
+.ProseMirror :is(h1, h2, h3, h4, h5, h6) + p {
+  margin-top: 0;
+}
 
 /* Lists */
 .ProseMirror ul,
@@ -361,38 +375,56 @@ samp {
   padding: 0;
 }
 
-/* Syntax Highlighting (lowlight / highlight.js) */
+/* Syntax Highlighting (lowlight / highlight.js) — VS Code theme roles, not Dark+ hex */
 .ProseMirror pre code .hljs-comment,
-.ProseMirror pre code .hljs-quote { color: #6a9955; font-style: italic; }
+.ProseMirror pre code .hljs-quote {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
 .ProseMirror pre code .hljs-keyword,
 .ProseMirror pre code .hljs-selector-tag,
-.ProseMirror pre code .hljs-addition { color: #569cd6; }
+.ProseMirror pre code .hljs-addition {
+  color: var(--vscode-charts-blue, var(--vscode-textLink-foreground));
+}
 .ProseMirror pre code .hljs-number,
 .ProseMirror pre code .hljs-string,
 .ProseMirror pre code .hljs-meta .hljs-meta-string,
 .ProseMirror pre code .hljs-literal,
 .ProseMirror pre code .hljs-doctag,
-.ProseMirror pre code .hljs-regexp { color: #ce9178; }
+.ProseMirror pre code .hljs-regexp {
+  color: var(--vscode-charts-orange, var(--vscode-editorWarning-foreground));
+}
 .ProseMirror pre code .hljs-title,
 .ProseMirror pre code .hljs-section,
 .ProseMirror pre code .hljs-name,
 .ProseMirror pre code .hljs-selector-id,
-.ProseMirror pre code .hljs-selector-class { color: #dcdcaa; }
+.ProseMirror pre code .hljs-selector-class {
+  color: var(--vscode-charts-yellow, var(--vscode-textPreformat-foreground, var(--vscode-editor-foreground)));
+}
 .ProseMirror pre code .hljs-attribute,
 .ProseMirror pre code .hljs-attr,
 .ProseMirror pre code .hljs-variable,
 .ProseMirror pre code .hljs-template-variable,
 .ProseMirror pre code .hljs-class .hljs-title,
-.ProseMirror pre code .hljs-type { color: #4ec9b0; }
+.ProseMirror pre code .hljs-type {
+  color: var(--vscode-charts-green, var(--vscode-textLink-foreground));
+}
 .ProseMirror pre code .hljs-symbol,
 .ProseMirror pre code .hljs-bullet,
 .ProseMirror pre code .hljs-subst,
 .ProseMirror pre code .hljs-meta,
 .ProseMirror pre code .hljs-meta .hljs-keyword,
-.ProseMirror pre code .hljs-tag { color: #d4d4d4; }
+.ProseMirror pre code .hljs-tag {
+  color: var(--vscode-textPreformat-foreground, var(--vscode-editor-foreground));
+}
 .ProseMirror pre code .hljs-built_in,
-.ProseMirror pre code .hljs-builtin-name { color: #4ec9b0; }
-.ProseMirror pre code .hljs-deletion { color: #ce9178; text-decoration: line-through; }
+.ProseMirror pre code .hljs-builtin-name {
+  color: var(--vscode-charts-green, var(--vscode-textLink-foreground));
+}
+.ProseMirror pre code .hljs-deletion {
+  color: var(--vscode-errorForeground);
+  text-decoration: line-through;
+}
 .ProseMirror pre code .hljs-emphasis { font-style: italic; }
 .ProseMirror pre code .hljs-strong { font-weight: bold; }
 
@@ -419,7 +451,7 @@ samp {
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #2563EB;
+  accent-color: var(--vscode-focusBorder, var(--vscode-textLink-foreground));
   cursor: pointer;
 }
 
@@ -1810,7 +1842,7 @@ samp {
 /* Link styles */
 .ProseMirror a,
 .ProseMirror .editor-link {
-  color: #2563EB;
+  color: var(--vscode-textLink-foreground);
   text-decoration: underline;
   cursor: pointer;
   transition: color 0.2s;
@@ -1818,7 +1850,7 @@ samp {
 
 .ProseMirror a:hover,
 .ProseMirror .editor-link:hover {
-  color: #2563EB;
+  color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
   text-decoration: underline;
 }
 
@@ -1832,7 +1864,7 @@ samp {
 
 /* Editor Title Area */
 .editor-title-area {
-  padding: 24px 24px 16px;
+  padding: 24px var(--editor-document-inset, 24px) 16px;
 }
 
 .editor-title-input {
@@ -2031,7 +2063,7 @@ samp {
   }
 
   .editor-title-area {
-    padding: 16px 16px 12px;
+    padding: 16px var(--editor-document-inset, 16px) 12px;
   }
 
   .editor-title-input {
@@ -2109,7 +2141,7 @@ samp {
 
 /* Internal reference link styling (href starts with #) */
 .ProseMirror a[href^="#"] {
-  color: #2563EB;
+  color: var(--vscode-textLink-foreground);
   text-decoration: none;
   cursor: pointer;
 }
@@ -2270,6 +2302,25 @@ samp {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  --editor-document-inset: 24px;
+}
+
+/* One reading column: shared inset + capped measure */
+.editor-scroll-area .editor-title-area,
+.editor-scroll-area .ProseMirror {
+  max-width: min(100%, 44rem);
+  margin-inline: auto;
+}
+
+.editor-scroll-area .ProseMirror {
+  padding-left: var(--editor-document-inset);
+  padding-right: var(--editor-document-inset);
+}
+
+@media (max-width: 640px) {
+  .editor-scroll-area {
+    --editor-document-inset: 16px;
+  }
 }
 
 /* ===== Editor Zoom Bar (floating pill, bottom-right) ===== */
@@ -3668,47 +3719,47 @@ html.is-resizing-side-panel * {
 
 /* variant: note */
 .callout-block[data-variant="note"] {
-  background-color: rgba(100, 116, 139, 0.1);
-  border-color: #64748b;
+  background-color: color-mix(in srgb, var(--vscode-descriptionForeground) 12%, transparent);
+  border-color: var(--vscode-descriptionForeground);
 }
 .callout-block[data-variant="note"] .callout-header {
-  color: #64748b;
+  color: var(--vscode-descriptionForeground);
 }
 
 /* variant: info */
 .callout-block[data-variant="info"] {
-  background-color: rgba(14, 165, 233, 0.1);
-  border-color: #0ea5e9;
+  background-color: color-mix(in srgb, var(--vscode-charts-blue, var(--vscode-textLink-foreground)) 12%, transparent);
+  border-color: var(--vscode-charts-blue, var(--vscode-textLink-foreground));
 }
 .callout-block[data-variant="info"] .callout-header {
-  color: #0ea5e9;
+  color: var(--vscode-charts-blue, var(--vscode-textLink-foreground));
 }
 
 /* variant: tip */
 .callout-block[data-variant="tip"] {
-  background-color: rgba(34, 197, 94, 0.1);
-  border-color: #22c55e;
+  background-color: color-mix(in srgb, var(--vscode-charts-green, var(--vscode-textLink-foreground)) 12%, transparent);
+  border-color: var(--vscode-charts-green, var(--vscode-textLink-foreground));
 }
 .callout-block[data-variant="tip"] .callout-header {
-  color: #22c55e;
+  color: var(--vscode-charts-green, var(--vscode-textLink-foreground));
 }
 
 /* variant: warning */
 .callout-block[data-variant="warning"] {
-  background-color: rgba(245, 158, 11, 0.1);
-  border-color: #f59e0b;
+  background-color: color-mix(in srgb, var(--vscode-editorWarning-foreground, var(--vscode-charts-orange)) 12%, transparent);
+  border-color: var(--vscode-editorWarning-foreground, var(--vscode-charts-orange));
 }
 .callout-block[data-variant="warning"] .callout-header {
-  color: #f59e0b;
+  color: var(--vscode-editorWarning-foreground, var(--vscode-charts-orange));
 }
 
 /* variant: danger */
 .callout-block[data-variant="danger"] {
-  background-color: rgba(239, 68, 68, 0.1);
-  border-color: #ef4444;
+  background-color: color-mix(in srgb, var(--vscode-errorForeground) 12%, transparent);
+  border-color: var(--vscode-errorForeground);
 }
 .callout-block[data-variant="danger"] .callout-header {
-  color: #ef4444;
+  color: var(--vscode-errorForeground);
 }
 
 /* Callout variant picker (BubbleMenu + Toolbar) */
