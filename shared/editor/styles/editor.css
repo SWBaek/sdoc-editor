@@ -3034,7 +3034,7 @@ html.is-resizing-side-panel * {
   --settings-control-radius: 4px;
   --settings-row-gap: 10px;
   --settings-control-gap: 6px;
-  --settings-toggle-size: 24px;
+  --settings-toggle-size: 32px;
 }
 
 .settings-panel {
@@ -3066,7 +3066,7 @@ html.is-resizing-side-panel * {
 }
 
 .design-compact-preview {
-  display: none;
+  display: block;
   margin: 8px 12px 12px;
   padding: 10px;
   border: 1px solid var(--vscode-panel-border);
@@ -3101,8 +3101,7 @@ html.is-resizing-side-panel * {
   font-size: 14px;
 }
 
-.design-compact-preview.has-decoration .design-compact-preview-h1,
-.design-compact-preview.has-decoration .design-compact-preview-h2 {
+.design-compact-preview.has-decoration .design-compact-preview-h1 {
   border-bottom: 2px solid currentColor;
 }
 
@@ -3110,12 +3109,6 @@ html.is-resizing-side-panel * {
   margin-top: 8px;
   color: #4b5563;
   font-size: 11px;
-}
-
-@media (min-width: 800px) and (max-width: 1100px) {
-  .side-panel.is-overlay .design-compact-preview {
-    display: block;
-  }
 }
 
 .settings-sync-state {
@@ -3215,9 +3208,21 @@ html.is-resizing-side-panel * {
 }
 
 .settings-provenance {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.settings-hint {
+  margin: 0;
+  padding: 4px 12px 8px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.settings-section-body > .settings-hint {
+  padding-inline: 0;
 }
 
 .settings-badge {
@@ -3914,18 +3919,20 @@ html.is-resizing-side-panel * {
 }
 
 .side-panel-control-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(7rem, auto);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
   padding: 6px 12px 10px;
 }
 
 .side-panel-control-copy {
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: min(100%, max-content);
   display: flex;
   flex-direction: column;
   gap: 2px;
+  overflow-wrap: anywhere;
 }
 
 .side-panel-control-description {
@@ -3935,24 +3942,16 @@ html.is-resizing-side-panel * {
 }
 
 .side-panel-select {
+  box-sizing: border-box;
+  flex: 0 0 auto;
   min-width: 0;
-  width: 100%;
-  max-width: 10rem;
+  width: max-content;
+  max-width: 100%;
   padding: 4px 24px 4px 6px;
   border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border));
   border-radius: 3px;
   background: var(--vscode-dropdown-background, var(--vscode-input-background));
   color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground));
-}
-
-.side-panel-view-preference {
-  grid-template-columns: minmax(0, 1fr);
-  align-items: stretch;
-}
-
-.side-panel-view-preference .side-panel-select {
-  width: 100%;
-  max-width: none;
 }
 
 .side-panel-select:focus-visible {
@@ -4351,6 +4350,10 @@ html.is-resizing-side-panel * {
   color: var(--vscode-foreground);
   font-size: 12px;
   font-weight: 600;
+}
+
+.files-panel-advanced .settings-panel-title {
+  display: none;
 }
 
 .file-operation-list {
