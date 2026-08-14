@@ -2344,13 +2344,19 @@ samp {
   min-height: 0;
   overflow-y: auto;
   --editor-document-inset: 24px;
+  --editor-reading-max: 72rem;
   padding-bottom: 52px; /* last heading underline clears the floating zoom pill */
 }
 
-/* One reading column: shared inset + capped measure */
+.editor-scroll-area[data-reading-width="narrow"] { --editor-reading-max: 44rem; }
+.editor-scroll-area[data-reading-width="comfortable"] { --editor-reading-max: 56rem; }
+.editor-scroll-area[data-reading-width="wide"] { --editor-reading-max: 72rem; }
+.editor-scroll-area[data-reading-width="full"] { --editor-reading-max: 100%; }
+
+/* One reading column: shared inset + host-local measure */
 .editor-scroll-area .editor-title-area,
 .editor-scroll-area .ProseMirror {
-  max-width: min(100%, 44rem);
+  max-width: min(100%, var(--editor-reading-max));
   margin-inline: auto;
 }
 
@@ -2440,6 +2446,32 @@ samp {
 .editor-zoom-bar .zoom-label:hover {
   opacity: 1;
   text-decoration: underline;
+}
+
+.editor-zoom-bar .zoom-reading-width {
+  max-width: 5.25rem;
+  height: 18px;
+  margin: 0;
+  padding: 0 0 0 2px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font-size: 10px;
+  font-family: var(--sdoc-font-sans);
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+.editor-zoom-bar .zoom-reading-width:hover,
+.editor-zoom-bar .zoom-reading-width:focus-visible {
+  opacity: 1;
+  background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.15));
+}
+
+.editor-zoom-bar .zoom-reading-width:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 0;
 }
 
 /* ===== Table of Contents Panel ===== */
