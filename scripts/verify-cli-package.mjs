@@ -31,7 +31,8 @@ npm(['pack', '--dry-run', '--json', './cli']);
 const prefix = mkdtempSync(path.join(tmpdir(), 'sdoc-cli-package-'));
 try {
   npm(['install', '--global', '--prefix', prefix, packageFile]);
-  const installedEntry = path.join(prefix, 'node_modules', 'sdoc-editor-cli', 'dist', 'sdoc.js');
+  const globalModules = npm(['root', '--global', '--prefix', prefix]).trim();
+  const installedEntry = path.join(globalModules, 'sdoc-editor-cli', 'dist', 'sdoc.js');
   const version = execFileSync(process.execPath, [installedEntry, '--version'], { encoding: 'utf8' }).trim();
   if (version !== manifest.version) {
     throw new Error(`Installed CLI reported ${version}; expected ${manifest.version}.`);
