@@ -2,7 +2,7 @@
 
 ## Overview
 
-Structured Doc Editor v0.9.3 has two supported delivery surfaces: the VS Code
+Structured Doc Editor on `main` has two supported delivery surfaces: the VS Code
 extension for visual editing and the SDOC CLI for non-visual document
 automation. Both consume one TypeScript document core and the same persisted
 `.sdoc` contract.
@@ -210,7 +210,7 @@ publication. The host renders only after authoritative global consent, while con
 preserve a source-only fallback when rendering is declined or unavailable.
 Consent and renderer trust settings never enter `.sdoc` or `DocumentSettings`.
 See [ADR 0011](adr/0011-use-opt-in-host-diagram-rendering.md),
-[ADR 0012](adr/0012-use-first-use-consent-for-external-diagram-rendering.md),
+[ADR 0020](adr/0020-use-first-use-consent-for-external-diagram-rendering.md),
 and [ADR 0013](adr/0013-use-validated-per-language-diagram-images.md).
 
 `shared/document/numbering.ts` is the single numbering index for editor
@@ -319,10 +319,10 @@ constraints in effect when those versions were supported.
 
 ## Verification
 
-- `npm run check`: version sync, design and generated-validator contracts,
-  TypeScript, ESLint, and Vitest
-- `npm run build:all`: VS Code extension, webview, and CLI builds
-- `npm run package`: version-checked VSIX in `output/`
-- `npm run package:cli`: installable CLI `.tgz` in `output/`
+The composable `verify:*` scripts in `package.json` are the executable
+verification contract. CI invokes those same targeted entry points instead of
+redefining their meaning in workflow YAML. The complete local procedure and
+the fast, UI, Extension Host, build, and packaging scopes are documented once
+in [CONTRIBUTING.md](../CONTRIBUTING.md#verification-contract).
 
-Rust and Tauri checks are not part of the v0.9.3 build contract.
+Rust and Tauri checks are not part of the current build contract.

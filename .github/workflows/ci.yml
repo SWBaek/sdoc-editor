@@ -18,10 +18,9 @@ jobs:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
-      - run: npm run check
-      - run: npm run build:all
-      - run: npm run package
-      - run: npm run package:cli
+      - run: npm run verify:fast
+      - run: npm run verify:build
+      - run: npm run verify:package:vscode
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: vsix
@@ -38,7 +37,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install chromium
-      - run: npm run test:ui
+      - run: npm run verify:ui
       - name: Upload UI test evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -58,8 +57,7 @@ jobs:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
-      - run: npm run build
-      - run: npm run test:vscode
+      - run: npm run verify:vscode
 
   cli-package:
     name: CLI package smoke (${{ matrix.os }})
@@ -75,22 +73,7 @@ jobs:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
-      - run: npm run package:cli
-      - name: Verify workspace-linked CLI entry point
-        run: |
-          npm exec --no --offline --package=sdoc-editor-cli -- sdoc --version
-          node node_modules/sdoc-editor-cli/dist/sdoc.js --version
-      - name: Inspect CLI package contents
-        run: npm pack --dry-run ./cli
-      - name: Install package and run sdoc (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          package="$(realpath "$(find output -maxdepth 1 -type f -name '*.tgz' -print -quit)")"
-          test -n "$package"
-          prefix="$RUNNER_TEMP/sdoc-cli"
-          npm install --global --prefix "$prefix" "$package"
-          "$prefix/bin/sdoc" --version
+      - run: npm run verify:package:cli
       - name: Install package and run sdoc (Windows)
         if: runner.os == 'Windows'
         shell: pwsh

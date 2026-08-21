@@ -20,11 +20,26 @@
 
 ```bash
 npm ci
-npm run check
-npm run build:all
 ```
 
-`npm run check`는 버전 정합성, 디자인 계약, 생성된 validator, TypeScript, ESLint, 단위 테스트를 순서대로 검사합니다. VS Code 확장만 빌드하려면 `npm run build`, VS Code 확장과 CLI를 모두 빌드하려면 `npm run build:all`을 사용합니다.
+## Verification contract
+
+`package.json`의 `verify:*` script가 로컬과 CI가 공유하는 검증 계약입니다.
+`npm run check`는 기존 자동화 호환성을 위한 `verify:fast` 별칭입니다.
+
+| 명령 | 권위 있는 검증 범위 |
+|---|---|
+| `npm run verify:fast` | 반복 작업용: 버전·repository knowledge/architecture·디자인·생성 validator 계약, TypeScript, ESLint, Vitest |
+| `npm run verify:build` | VS Code extension, webview, CLI build |
+| `npm run verify:ui` | Playwright의 UI 품질·접근성·visual·responsive/theme 검증 |
+| `npm run verify:vscode` | build 후 실제 VS Code Extension Host 통합 검증 |
+| `npm run verify:package:vscode` | version-checked VSIX 생성 |
+| `npm run verify:package:cli` | CLI `.tgz` 생성, contents·설치·UTF-8 smoke 검증; CI가 Windows shell shim 검증을 추가 수행 |
+| `npm run verify:all` | material change 완료 전 위 deterministic local surface 전체 |
+
+작업 중에는 `verify:fast`와 영향받은 targeted command를 실행하고, material
+change를 완료하기 전에는 저장소 루트에서 `npm run verify:all`을 실행합니다.
+UI나 파일 I/O처럼 사람의 판단이 필요한 항목은 아래 수동 검증도 추가합니다.
 
 ## 작업 흐름
 
@@ -36,7 +51,7 @@ npm run build:all
 
 관련 없는 포맷 변경이나 생성 파일을 같은 PR에 포함하지 마세요. 저장 형식, migration, ID, 교차 참조, converter를 바꾸는 경우는 `AGENTS.md`의 행동 테스트 우선 규칙을 따릅니다.
 
-## 자주 쓰는 명령
+## 추가 개발 명령
 
 | 명령 | 용도 |
 |---|---|
@@ -44,13 +59,7 @@ npm run build:all
 | `npm run typecheck` | 루트와 모든 workspace 타입 검사 |
 | `npm run lint` | 모든 TypeScript/React 소스 린트 |
 | `npm test` | Vitest 단위 테스트 |
-| `npm run test:ui` | Playwright UI 품질·접근성 테스트 |
-| `npm run test:vscode` | 실제 VS Code Extension Host 통합 smoke test |
-| `npm run build` | Extension host와 VS Code 웹뷰 빌드 |
-| `npm run build:all` | VS Code 확장과 CLI 빌드 |
-| `npm run package` | `output/`에 VSIX 생성 |
 | `npm run build:cli` | Node.js CLI 단일 ESM bundle 빌드 |
-| `npm run package:cli` | 설치 가능한 CLI `.tgz`를 `output/`에 생성 |
 | `npm run licenses:check` | npm 라이선스와 제3자 고지 검증 |
 
 `npm run package`와 `npm run package:cli`는
@@ -67,35 +76,12 @@ npm run build:all
 저장소 루트에서 CLI 빌드와 패키징을 검증합니다.
 
 ```powershell
-npm run build:cli
-npm run package:cli
+npm run verify:package:cli
 ```
 
-`package:cli`는 설치 가능한 `.tgz`를 `output/`에 생성합니다. 소스를 직접
-실행하는 대신 실제 패키지를 별도 임시 프로젝트에 설치해 smoke test합니다.
-
-```powershell
-$version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-$packages = @(Get-ChildItem output -Filter "sdoc-editor-cli-$version.tgz")
-if ($packages.Count -ne 1) {
-  throw "Expected one CLI package for $version, found $($packages.Count)."
-}
-$package = $packages[0].FullName
-$smoke = Join-Path ([IO.Path]::GetTempPath()) "sdoc-cli-$([guid]::NewGuid())"
-New-Item -ItemType Directory -Path $smoke | Out-Null
-Push-Location $smoke
-try {
-  npm init --yes | Out-Null
-  if ($LASTEXITCODE -ne 0) { throw "npm init failed: $LASTEXITCODE" }
-  npm install --save-dev $package
-  if ($LASTEXITCODE -ne 0) { throw "npm install failed: $LASTEXITCODE" }
-  npm exec --no --offline --package=sdoc-editor-cli -- sdoc --version
-  if ($LASTEXITCODE -ne 0) { throw "CLI smoke test failed: $LASTEXITCODE" }
-} finally {
-  Pop-Location
-  Remove-Item -LiteralPath $smoke -Recurse -Force
-}
-```
+이 명령은 설치 가능한 `.tgz`를 `output/`에 만들고 package contents, workspace
+entry point, 별도 prefix 설치, UTF-8 문서 생성을 검증합니다. CI는 Windows의
+PowerShell 7, Windows PowerShell 5.1, `cmd.exe` shim도 추가로 검증합니다.
 
 기능 PR에서 공개 npm registry에 게시하지 마세요. CI는 workflow artifact로
 패키지를 업로드하고, 태그 기반 `.github/workflows/release-cli.yml`은 GitHub
@@ -139,7 +125,7 @@ UI 또는 파일 I/O 변경은 자동 검사 외에도 해당 배포면에서 �
 
 - 변경 범위가 한 가지 목적에 집중되어 있는가
 - 새 동작 또는 회귀 위험에 테스트가 있는가
-- `npm run check`와 관련 빌드가 통과하는가
+- `npm run verify:all`과 필요한 수동 검증이 통과하는가
 - 사용자 기능 변경이 `README.md`와 `CHANGELOG.md`에 반영되었는가
 - 구조적 결정이 필요했다면 `docs/adr/`에 짧은 ADR을 남겼는가
 - 생성물, 로컬 설정, 비밀 정보가 커밋에 포함되지 않았는가
