@@ -195,8 +195,10 @@ identity-bound save event is required before the UI reports `Saved`. See
 
 `shared/converter/` contains host-neutral import/export conversion.
 `shared/settingsResolver.ts` owns defaults, caption presets, and
-document-over-workspace setting resolution. Neither layer may access VS Code or
-the filesystem.
+document-over-workspace setting resolution. Delivery surfaces consume those
+defaults rather than copying fallback values. Manifest contract tests keep
+contributed VS Code defaults synchronized with the resolver. Neither layer may
+access VS Code or the filesystem.
 
 Mermaid diagrams render locally. PlantUML, D2, and Graphviz rendering requires
 first-use consent and is performed by the VS Code extension host with a bounded
@@ -312,10 +314,18 @@ constraints in effect when those versions were supported.
 3. Template discovery and file creation belong to delivery surfaces; template
    parsing and instantiation belong to `shared/template/`.
 4. Extension-host and webview differences cross typed adapters or component
-   props, never ambient globals.
+   props, never ambient `window.__*` globals.
 5. Reusable UI and structural CSS live in `shared/editor/`; webview integration
    styles only map the VS Code theme or shell behavior.
 6. External JSON is accepted as `unknown` and narrowed at its boundary.
+7. Normal Extension Host paths use asynchronous filesystem APIs so document,
+   asset, template, and export work cannot block the host event loop.
+
+`npm run repo:check` enforces the current direct host-neutral import boundaries,
+rejects synchronous filesystem calls in `src/`, and rejects ambient
+`window.__*` bridges in editor delivery code. It is intentionally not a general
+TypeScript module-resolution framework; expand it when new aliases or boundary
+mechanisms are introduced.
 
 ## Verification
 

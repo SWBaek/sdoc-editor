@@ -82,4 +82,17 @@ describe('repository engineering harness', () => {
     expect(result.stderr).toContain('host-neutral shared code imports host API "node:fs/promises"');
     expect(result.stderr).toContain('shared code imports outside shared/');
   });
+
+  it('rejects blocking extension-host I/O and ambient editor bridges', () => {
+    const root = fixture({
+      'src/blocking.ts': "import { readFileSync } from 'node:fs';\nreadFileSync('document.sdoc');\n",
+      'webview-ui/src/ambient.ts': 'window.__hostBridge.postMessage({});\n',
+    });
+
+    const result = check(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('extension-host code calls a synchronous filesystem API');
+    expect(result.stderr).toContain('editor code uses an ambient window.__* bridge');
+  });
 });

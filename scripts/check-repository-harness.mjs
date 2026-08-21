@@ -229,15 +229,109 @@ function importSpecifiers(file, content) {
   return specifiers;
 }
 
+function sourcePolicyViolations(file, content, options) {
+  const source = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, sourceKind(file));
+  const syncFilesystemBindings = new Set();
+  const filesystemNamespaces = new Set();
+  const violations = [];
+
+  const isFilesystemModule = (node) => ts.isStringLiteral(node) && (node.text === 'fs' || node.text === 'node:fs');
+  const isFilesystemRequire = (node) => ts.isCallExpression(node)
+    && ts.isIdentifier(node.expression)
+    && node.expression.text === 'require'
+    && node.arguments.length === 1
+    && isFilesystemModule(node.arguments[0]);
+
+  function collectFilesystemBindings(node) {
+    if (ts.isImportDeclaration(node) && isFilesystemModule(node.moduleSpecifier) && node.importClause) {
+      if (node.importClause.name) filesystemNamespaces.add(node.importClause.name.text);
+      const bindings = node.importClause.namedBindings;
+      if (bindings && ts.isNamespaceImport(bindings)) filesystemNamespaces.add(bindings.name.text);
+      if (bindings && ts.isNamedImports(bindings)) {
+        for (const element of bindings.elements) {
+          const importedName = element.propertyName?.text ?? element.name.text;
+          if (importedName.endsWith('Sync')) syncFilesystemBindings.add(element.name.text);
+        }
+      }
+    }
+    if (ts.isVariableDeclaration(node) && node.initializer && isFilesystemRequire(node.initializer)) {
+      if (ts.isIdentifier(node.name)) filesystemNamespaces.add(node.name.text);
+      if (ts.isObjectBindingPattern(node.name)) {
+        for (const element of node.name.elements) {
+          const importedName = element.propertyName && ts.isIdentifier(element.propertyName)
+            ? element.propertyName.text
+            : ts.isIdentifier(element.name) ? element.name.text : '';
+          if (importedName.endsWith('Sync') && ts.isIdentifier(element.name)) {
+            syncFilesystemBindings.add(element.name.text);
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, collectFilesystemBindings);
+  }
+
+  collectFilesystemBindings(source);
+
+  function inspect(node) {
+    if (options.extensionHost && ts.isCallExpression(node)) {
+      const expression = node.expression;
+      const directSyncCall = ts.isIdentifier(expression) && syncFilesystemBindings.has(expression.text);
+      const namespaceSyncCall = ts.isPropertyAccessExpression(expression)
+        && expression.name.text.endsWith('Sync')
+        && ((ts.isIdentifier(expression.expression) && filesystemNamespaces.has(expression.expression.text))
+          || isFilesystemRequire(expression.expression));
+      if (directSyncCall || namespaceSyncCall) {
+        violations.push({
+          position: expression.getStart(source),
+          message: 'extension-host code calls a synchronous filesystem API. Use node:fs/promises or vscode.workspace.fs so normal editor paths do not block the Extension Host.',
+        });
+      }
+    }
+
+    if (options.editorSurface) {
+      const ambientProperty = ts.isPropertyAccessExpression(node)
+        && ts.isIdentifier(node.expression)
+        && node.expression.text === 'window'
+        && node.name.text.startsWith('__');
+      const ambientElement = ts.isElementAccessExpression(node)
+        && ts.isIdentifier(node.expression)
+        && node.expression.text === 'window'
+        && node.argumentExpression
+        && ts.isStringLiteral(node.argumentExpression)
+        && node.argumentExpression.text.startsWith('__');
+      if (ambientProperty || ambientElement) {
+        violations.push({
+          position: node.getStart(source),
+          message: 'editor code uses an ambient window.__* bridge. Pass host capabilities through EditorHostBridge or EditorExtensionRuntime with explicit types.',
+        });
+      }
+    }
+    ts.forEachChild(node, inspect);
+  }
+
+  inspect(source);
+  return violations;
+}
+
 async function checkArchitectureBoundaries(root, files, errors) {
   const sourceFiles = files.filter((file) => /\.(?:[cm]?[jt]sx?)$/.test(file));
   const sharedRoot = path.join(root, 'shared');
+  const sharedEditorRoot = path.join(sharedRoot, 'editor');
   const deliveryRoots = [path.join(root, 'src'), path.join(root, 'webview-ui'), path.join(root, 'cli')];
+  const extensionRoot = deliveryRoots[0];
+  const webviewRoot = deliveryRoots[1];
 
   for (const file of sourceFiles) {
     const content = await readFile(file, 'utf8');
+    const isInside = (directory) => file === directory || file.startsWith(`${directory}${path.sep}`);
+    for (const violation of sourcePolicyViolations(file, content, {
+      extensionHost: isInside(extensionRoot),
+      editorSurface: isInside(sharedEditorRoot) || isInside(webviewRoot),
+    })) {
+      errors.push(`${relative(root, file)}:${lineNumber(content, violation.position)}: ${violation.message}`);
+    }
     for (const { value, position } of importSpecifiers(file, content)) {
-      const inShared = file === sharedRoot || file.startsWith(`${sharedRoot}${path.sep}`);
+      const inShared = isInside(sharedRoot);
       if (inShared && (value === 'vscode' || value.startsWith('vscode/') || nodeBuiltins.has(value))) {
         errors.push(`${relative(root, file)}:${lineNumber(content, position)}: host-neutral shared code imports host API "${value}". Move filesystem/VS Code work to src/, webview-ui/, or cli/ and inject a typed adapter.`);
       }
@@ -248,7 +342,7 @@ async function checkArchitectureBoundaries(root, files, errors) {
         errors.push(`${relative(root, file)}:${lineNumber(content, position)}: shared code imports outside shared/ via "${value}". Reverse the dependency and expose the capability through a host-neutral interface.`);
       }
 
-      const owner = deliveryRoots.find((candidate) => file === candidate || file.startsWith(`${candidate}${path.sep}`));
+      const owner = deliveryRoots.find(isInside);
       if (owner) {
         const foreign = deliveryRoots.find((candidate) => candidate !== owner && (resolved === candidate || resolved.startsWith(`${candidate}${path.sep}`)));
         if (foreign) {

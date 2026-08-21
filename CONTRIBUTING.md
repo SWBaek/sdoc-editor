@@ -12,9 +12,8 @@
 
 ## 개발 환경
 
-- Node.js 22.22.2 이상 (`.node-version` 참고)
-- npm 10 이상
-- VS Code 1.85 이상
+- `.node-version`에 선언된 Node.js와 그 배포판의 npm을 사용합니다.
+- 지원하는 VS Code 범위는 `package.json#engines.vscode`가 기준입니다.
 
 처음 한 번만 루트에서 의존성을 설치합니다. 하위 workspace에서 별도로 `npm install`하지 않습니다.
 
@@ -31,11 +30,12 @@ npm ci
 |---|---|
 | `npm run verify:fast` | 반복 작업용: 버전·repository knowledge/architecture·디자인·생성 validator 계약, TypeScript, ESLint, Vitest |
 | `npm run verify:build` | VS Code extension, webview, CLI build |
-| `npm run verify:ui` | Playwright의 UI 품질·접근성·visual·responsive/theme 검증 |
+| `npm run verify:ui` | Chromium 준비 후 Playwright의 UI 품질·접근성·visual·responsive/theme 검증 |
 | `npm run verify:vscode` | build 후 실제 VS Code Extension Host 통합 검증 |
-| `npm run verify:package:vscode` | version-checked VSIX 생성 |
-| `npm run verify:package:cli` | CLI `.tgz` 생성, contents·설치·UTF-8 smoke 검증; CI가 Windows shell shim 검증을 추가 수행 |
-| `npm run verify:all` | material change 완료 전 위 deterministic local surface 전체 |
+| `npm run verify:package:vscode` | version-checked VSIX 생성 후 필수 extension/webview asset과 canonical CSS 검증 |
+| `npm run verify:package:vscode:host` | 생성된 VSIX를 풀어 실제 Extension Host에서 실행하는 release smoke 검증 |
+| `npm run verify:package:cli` | CLI `.tgz` 생성, contents·설치·UTF-8 smoke 검증; Windows에서는 PowerShell 7·5.1과 `cmd.exe` shim까지 검증 |
+| `npm run verify:all` | material change 완료 전 현재 OS에서 실행 가능한 reusable deterministic surface 전체 |
 
 작업 중에는 `verify:fast`와 영향받은 targeted command를 실행하고, material
 change를 완료하기 전에는 저장소 루트에서 `npm run verify:all`을 실행합니다.
@@ -80,8 +80,9 @@ npm run verify:package:cli
 ```
 
 이 명령은 설치 가능한 `.tgz`를 `output/`에 만들고 package contents, workspace
-entry point, 별도 prefix 설치, UTF-8 문서 생성을 검증합니다. CI는 Windows의
-PowerShell 7, Windows PowerShell 5.1, `cmd.exe` shim도 추가로 검증합니다.
+entry point, 별도 prefix 설치, UTF-8 문서 생성을 검증합니다. Windows에서
+실행하면 PowerShell 7, Windows PowerShell 5.1, `cmd.exe` shim도 같은 script가
+검증합니다. CI는 이 command를 Linux와 Windows에서 실행해 OS matrix만 제공합니다.
 
 기능 PR에서 공개 npm registry에 게시하지 마세요. CI는 workflow artifact로
 패키지를 업로드하고, 태그 기반 `.github/workflows/release-cli.yml`은 GitHub
@@ -94,7 +95,11 @@ OIDC로 npm에 패키지를 게시한 뒤 GitHub Release에 같은 패키지를 
 
 릴리스가 승인되면 루트와 npm workspace 버전을 맞추고 `npm run version:check`를 통과시킨 뒤 동일한 `v*` 태그를 사용합니다. `.github/workflows/release-cli.yml`은 CLI `.tgz`를 패키징하고 npm Trusted Publishing의 단기 GitHub OIDC 자격 증명으로 `sdoc-editor-cli`에 게시한 뒤 GitHub Release에 첨부합니다. 워크플로에는 장기 npm 게시 토큰을 저장하지 않으며, 게시 결과는 `npm view sdoc-editor-cli@X.Y.Z version`으로 확인합니다.
 
-같은 태그로 `.github/workflows/release-vscode.yml`도 실행되어 VSIX를 만든 뒤 Visual Studio Marketplace에 게시합니다. 이 워크플로는 GitHub OIDC와 Microsoft Entra 관리 ID를 사용하며 PAT 또는 장기 보관 클라이언트 비밀을 사용하지 않습니다.
+같은 태그로 `.github/workflows/release-vscode.yml`도 실행되어
+`verify:package:vscode`와 `verify:package:vscode:host`로 실제 배포 artifact를
+검증한 뒤 Visual Studio Marketplace에 게시합니다. 이 워크플로는 GitHub
+OIDC와 Microsoft Entra 관리 ID를 사용하며 PAT 또는 장기 보관 클라이언트
+비밀을 사용하지 않습니다.
 
 ## 코드 구조와 경계
 
@@ -108,7 +113,10 @@ OIDC로 npm에 패키지를 게시한 뒤 GitHub Release에 같은 패키지를 
 
 재사용 가능한 에디터 동작은 `shared/editor/`에 두고 VS Code 통합은 `src/` 또는 `webview-ui/`에 둡니다. 호스트 API는 어댑터 뒤에 두고, `shared/`에서는 `vscode`를 import하지 않습니다. `.sdoc` 저장 형식을 바꿀 때는 `shared/types.ts`, `shared/document/sdocUtils.ts`, `sdoc.schema.json`, 변환기, 테스트를 함께 갱신합니다.
 
-공통 에디터는 `EditorHostBridge`와 `EditorExtensionRuntime`만 통해 호스트 기능을 호출합니다. 전역 `window` 속성으로 기능을 노출하거나 메시지 payload에 임의 필드를 추가하지 마세요. VS Code 구현은 `src/`의 서비스와 어댑터 또는 `webview-ui/`의 조합 계층에 둡니다. 공통 레이아웃 CSS는 `shared/editor/styles/`에서 수정하고 웹뷰 통합 파일에는 테마 토큰과 shell 전용 스타일만 둡니다.
+공통 에디터의 host bridge, adapter, CSS ownership 계약은
+`docs/architecture.md#dependency-rules`가 기준입니다. 공통 레이아웃 CSS는
+`shared/editor/styles/`에서 수정하고 웹뷰 통합 파일에는 테마 토큰과 shell
+전용 스타일만 둡니다.
 
 Book 조합 규칙은 `shared/book/`에서만 변경합니다. 코어는 파일 시스템을 직접 읽지 않고 `BookDocumentLoader`를 주입받아야 하며, preview와 export가 서로 다른 병합 결과를 만들지 않도록 같은 `composeBook()` 결과를 사용합니다.
 

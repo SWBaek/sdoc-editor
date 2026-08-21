@@ -28,8 +28,8 @@ exists only in the `v0.7.8` tag and is not a build or verification target.
    cross-references, or converters; update schema, examples, and converters
    together when persisted semantics change.
 4. Keep host capabilities behind typed adapters. Host-neutral code must not
-   import VS Code, Node host APIs, or delivery-surface modules; CI enforces the
-   dependency boundary.
+   import VS Code, Node host APIs, or delivery-surface modules; CI enforces
+   those direct import boundaries.
 5. Keep reusable editor behavior and geometry in `shared/editor/`; keep VS Code
    integration in `src/` or `webview-ui/`. Read `DESIGN.md` before UI changes.
 6. Keep `.sdocbook` file loading behind `BookDocumentLoader`; composition must
