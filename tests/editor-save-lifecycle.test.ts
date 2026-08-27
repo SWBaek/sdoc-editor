@@ -2,6 +2,7 @@ import type { Editor } from '@tiptap/core';
 import { describe, expect, it, vi } from 'vitest';
 import {
   PendingEditorUpdateGate,
+  EditorSnapshotOperationCounter,
   EDITOR_ROOT_ATTRIBUTES,
   refreshTranslatedNodeViews,
   shouldEmitEditorFlush,
@@ -34,11 +35,27 @@ describe('editor save lifecycle', () => {
     expect(gate.consume()).toBe(false);
   });
 
-  it('keeps save flushes as acknowledgement barriers after debounce emission', () => {
-    expect(shouldEmitEditorFlush('barrier', false)).toBe(true);
+  it('reuses the submitted generation for save barriers after debounce emission', () => {
+    expect(shouldEmitEditorFlush('barrier', false)).toBe(false);
     expect(shouldEmitEditorFlush('barrier', true)).toBe(true);
     expect(shouldEmitEditorFlush('pending-only', false)).toBe(false);
     expect(shouldEmitEditorFlush('pending-only', true)).toBe(true);
+  });
+
+  it('counts complete editor JSON reads separately from reused-generation flushes', () => {
+    const counter = new EditorSnapshotOperationCounter();
+    const getJSON = vi.fn(() => ({ type: 'doc', content: [] }));
+
+    expect(counter.capture({ getJSON })).toEqual({ type: 'doc', content: [] });
+    counter.recordReusedGenerationFlush();
+    counter.recordReusedGenerationFlush();
+
+    expect(getJSON).toHaveBeenCalledOnce();
+    expect(counter.snapshot).toEqual({
+      getJsonCalls: 1,
+      flushesReusingSubmittedGeneration: 2,
+    });
+    expect(Object.isFrozen(counter.snapshot)).toBe(true);
   });
 
   it('recreates translated NodeViews without replacing the editor document', () => {

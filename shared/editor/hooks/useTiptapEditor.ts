@@ -46,8 +46,34 @@ export class PendingEditorUpdateGate {
 
 export type EditorFlushMode = 'barrier' | 'pending-only';
 
-export function shouldEmitEditorFlush(mode: EditorFlushMode, hadPendingUpdate: boolean): boolean {
-  return mode === 'barrier' || hadPendingUpdate;
+export interface EditorSnapshotOperationCounts {
+  getJsonCalls: number;
+  flushesReusingSubmittedGeneration: number;
+}
+
+export class EditorSnapshotOperationCounter {
+  private getJsonCalls = 0;
+  private flushesReusingSubmittedGeneration = 0;
+
+  public capture(editor: Pick<Editor, 'getJSON'>): JSONContent {
+    this.getJsonCalls += 1;
+    return editor.getJSON();
+  }
+
+  public recordReusedGenerationFlush(): void {
+    this.flushesReusingSubmittedGeneration += 1;
+  }
+
+  public get snapshot(): Readonly<EditorSnapshotOperationCounts> {
+    return Object.freeze({
+      getJsonCalls: this.getJsonCalls,
+      flushesReusingSubmittedGeneration: this.flushesReusingSubmittedGeneration,
+    });
+  }
+}
+
+export function shouldEmitEditorFlush(_mode: EditorFlushMode, hadPendingUpdate: boolean): boolean {
+  return hadPendingUpdate;
 }
 
 export function shouldFlushOnSaveShortcut(
@@ -72,6 +98,7 @@ export const useTiptapEditor = ({
 }: UseTiptapEditorOptions) => {
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const updateGateRef = useRef(new PendingEditorUpdateGate());
+  const snapshotOperationsRef = useRef(new EditorSnapshotOperationCounter());
   const replacementBoundaryRef = useRef(new EditorDocumentReplacementBoundary<JSONContent>());
   const onUpdateRef = useRef(onUpdate);
   useEffect(() => { onUpdateRef.current = onUpdate; }, [onUpdate]);
@@ -104,7 +131,7 @@ export const useTiptapEditor = ({
       debounceTimerRef.current = setTimeout(() => {
         debounceTimerRef.current = null;
         updateGateRef.current.clear();
-        const json = editor.getJSON();
+        const json = snapshotOperationsRef.current.capture(editor);
         onUpdateRef.current(json);
       }, 300);
     },
@@ -134,7 +161,11 @@ export const useTiptapEditor = ({
 
   const emitUpdate = useCallback((mode: EditorFlushMode) => {
     const hadPendingUpdate = updateGateRef.current.consume();
-    if (!editor || !shouldEmitEditorFlush(mode, hadPendingUpdate)) return false;
+    if (!editor) return false;
+    if (!shouldEmitEditorFlush(mode, hadPendingUpdate)) {
+      if (mode === 'barrier') snapshotOperationsRef.current.recordReusedGenerationFlush();
+      return false;
+    }
 
     // Clear any pending debounce
     if (debounceTimerRef.current) {
@@ -142,13 +173,15 @@ export const useTiptapEditor = ({
       debounceTimerRef.current = null;
     }
     // Immediately send current state
-    const json = editor.getJSON();
+    const json = snapshotOperationsRef.current.capture(editor);
     onUpdateRef.current(json);
     return true;
   }, [editor]);
 
-  // Save/close callers require an acknowledgement barrier even when the debounce
-  // already emitted an edit that may still be waiting in the host queue.
+  // Save/close callers create their acknowledgement barrier from the sync
+  // coordinator's current generation. If debounce already submitted that
+  // generation, recapturing the complete editor JSON here is both redundant and
+  // capable of creating a second mutation for the same editor state.
   const flushUpdate = useCallback(() => emitUpdate('barrier'), [emitUpdate]);
   // Template confirmation must not dirty an untouched document when cancelled.
   const flushPendingUpdate = useCallback(() => emitUpdate('pending-only'), [emitUpdate]);
