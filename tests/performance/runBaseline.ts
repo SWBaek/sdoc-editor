@@ -1,17 +1,11 @@
-import { Extension, getSchema } from '@tiptap/core';
-import { StarterKit } from '@tiptap/starter-kit';
-import { EditorState } from '@tiptap/pm/state';
 import { cpus, release, totalmem } from 'node:os';
 import { parseDocumentContract } from '../../shared/document/documentContract';
 import { normalizeDocument } from '../../shared/document/sdocUtils';
 import {
-  createDocumentStructureIndexPlugin,
-} from '../../shared/editor/structureIndex';
-import {
   createPerformanceRecorder,
   type PerformanceMeasurement,
 } from '../../shared/performance/instrumentation';
-import { resolveEditorSettings } from '../../shared/settingsResolver';
+import { createEditorTransactionSample } from './editorTransactionSample';
 import {
   acceptedPerformanceCorpusNames,
   createAcceptedPerformanceCorpus,
@@ -109,9 +103,9 @@ const runSamples = (
   phase: string,
   operationCount: number,
   options: BaselineOptions,
-  operation: () => void,
+  createOperation: () => () => void,
 ): BaselineResult => {
-  for (let index = 0; index < options.warmup; index += 1) operation();
+  for (let index = 0; index < options.warmup; index += 1) createOperation()();
   const samplesMs: number[] = [];
   for (let index = 0; index < options.samples; index += 1) {
     const recorder = createPerformanceRecorder(
@@ -123,7 +117,7 @@ const runSamples = (
         fixtureSeed: corpus.seed,
       },
     );
-    recorder.measure(phase, operation, operationCount);
+    recorder.measure(phase, createOperation(), operationCount);
     const measurement: PerformanceMeasurement | undefined = recorder.report().measurements[0];
     if (!measurement || measurement.outcome !== 'ok') {
       throw new Error(`performance phase did not produce a successful measurement: ${phase}`);
@@ -140,51 +134,20 @@ const runSamples = (
   };
 };
 
-const createEditorTransactionOperation = (
-  corpus: AcceptedPerformanceCorpus,
-): (() => void) | undefined => {
-  if (corpus.axis === 'rich') return undefined;
-  const stableBlockAttributes = Extension.create({
-    name: 'performanceStableBlockAttributes',
-    addGlobalAttributes() {
-      return [{
-        types: ['heading', 'paragraph', 'codeBlock', 'blockquote', 'bulletList', 'listItem'],
-        attributes: {
-          id: { default: null },
-          numbered: { default: null },
-        },
-      }];
-    },
-  });
-  const schema = getSchema([StarterKit, stableBlockAttributes]);
-  const settings = resolveEditorSettings();
-  const structurePlugin = createDocumentStructureIndexPlugin({ getSettings: () => settings });
-  let state = EditorState.create({
-    schema,
-    plugins: [structurePlugin],
-    doc: schema.nodeFromJSON(corpus.envelope.doc),
-  });
-  return () => {
-    const transaction = state.tr.insertText('x', 1);
-    if (!transaction.docChanged) throw new Error('ordinary text transaction must change the document');
-    state = state.apply(transaction);
-  };
-};
-
 const benchmarkCorpus = (
   corpus: AcceptedPerformanceCorpus,
   options: BaselineOptions,
 ): BaselineResult[] => {
   const results: BaselineResult[] = [];
-  results.push(runSamples(corpus, 'parse-json', corpus.byteLength, options, () => {
+  results.push(runSamples(corpus, 'parse-json', corpus.byteLength, options, () => () => {
     const parsed = JSON.parse(corpus.text) as unknown;
     if (typeof parsed !== 'object' || parsed === null) throw new Error('JSON parse produced no document');
   }));
-  results.push(runSamples(corpus, 'validate-contract', corpus.nodeCount, options, () => {
+  results.push(runSamples(corpus, 'validate-contract', corpus.nodeCount, options, () => () => {
     const parsed = parseDocumentContract(corpus.envelope);
     if (!parsed.ok) throw new Error(`accepted corpus failed validation: ${corpus.name}`);
   }));
-  results.push(runSamples(corpus, 'normalize-document', corpus.nodeCount, options, () => {
+  results.push(runSamples(corpus, 'normalize-document', corpus.nodeCount, options, () => () => {
     const normalized = normalizeDocument(corpus.envelope.doc, {
       captionStyle: 'modern',
       captionNumbering: 'sequential',
@@ -193,19 +156,22 @@ const benchmarkCorpus = (
     });
     if (normalized.type !== 'doc') throw new Error('normalization produced no document');
   }));
-  results.push(runSamples(corpus, 'serialize-pretty', corpus.byteLength, options, () => {
+  results.push(runSamples(corpus, 'serialize-pretty', corpus.byteLength, options, () => () => {
     const serialized = JSON.stringify(corpus.envelope, null, 2);
     if (serialized.length === 0) throw new Error('serialization produced no bytes');
   }));
 
-  const editorTransaction = createEditorTransactionOperation(corpus);
-  if (editorTransaction) {
+  if (corpus.axis !== 'rich') {
     results.push(runSamples(
       corpus,
       'editor-ordinary-text-transaction',
       1,
       options,
-      editorTransaction,
+      () => {
+        const sample = createEditorTransactionSample(corpus);
+        if (!sample) throw new Error('editor transaction sample was not supported');
+        return sample.run;
+      },
     ));
   }
   return results;

@@ -4,6 +4,7 @@ import { EditorContent } from '@tiptap/react';
 import type { PerformanceMeasurement, PerformanceReport } from '@shared/performance/instrumentation';
 import { NOOP_EDITOR_EXTENSION_RUNTIME } from '@shared/editor/extensionRuntime';
 import { useTiptapEditor } from '@shared/editor/hooks/useTiptapEditor';
+import { DocumentSyncCoordinator } from '@shared/persistence/DocumentSyncCoordinator';
 import {
   createAcceptedPerformanceCorpus,
   type AcceptedPerformanceCorpusName,
@@ -27,6 +28,8 @@ type BrowserCorpusName = Extract<
 interface BrowserPerformanceHarness {
   armKeyToNextPaint(): void;
   readKeyToNextPaint(): Promise<void>;
+  readDebouncedUpdate(): Promise<void>;
+  measureSyncCheckpoint(): void;
   measureScrollToBottom(): Promise<void>;
   measureNavigationToStart(): Promise<void>;
   report(jsHeapUsedBytes?: number): PerformanceReport;
@@ -70,9 +73,33 @@ function PerformanceEditor() {
   const corpus = useMemo(() => createAcceptedPerformanceCorpus(readCorpus()), []);
   const measurements = useRef<PerformanceMeasurement[]>([]);
   const keyProbe = useRef<Promise<void> | null>(null);
+  const debounceProbe = useRef<Promise<void> | null>(null);
+  const resolveDebounceProbe = useRef<(() => void) | null>(null);
+  const keyStartedAt = useRef<number | null>(null);
+  const keyProbeCapturedBeforeBubble = useRef(false);
+  const syncSubmitCallbacks = useRef(0);
   const ready = useRef(false);
+  const sync = useMemo(() => {
+    const coordinator = new DocumentSyncCoordinator({
+      identity: { sessionId: 'performance-session', documentId: 'performance-document', revision: 0 },
+      createEditId: () => 'performance-edit',
+      send: () => { syncSubmitCallbacks.current += 1; },
+    });
+    coordinator.adoptReplacement(0, {
+      content: { type: 'doc', content: [] },
+      meta: corpus.envelope.meta,
+      documentSettings: null,
+    });
+    return coordinator;
+  }, [corpus]);
   const { editor, replaceEditorDocument } = useTiptapEditor({
-    onUpdate: () => undefined,
+    onUpdate: () => {
+      if (keyStartedAt.current === null) return;
+      measurements.current.push(durationMeasurement('debounced-update-wait', keyStartedAt.current, 1));
+      keyStartedAt.current = null;
+      resolveDebounceProbe.current?.();
+      resolveDebounceProbe.current = null;
+    },
     runtime: NOOP_EDITOR_EXTENSION_RUNTIME,
     handleSaveShortcut: false,
     translationLocale: 'en',
@@ -98,9 +125,12 @@ function PerformanceEditor() {
     window.__sdocBrowserPerformance = {
       armKeyToNextPaint(): void {
         if (keyProbe.current) throw new Error('a key probe is already pending');
+        debounceProbe.current = new Promise<void>((resolve) => { resolveDebounceProbe.current = resolve; });
         keyProbe.current = new Promise<void>((resolve) => {
           editor.view.dom.addEventListener('keydown', (event) => {
             const startedAt = performance.now();
+            keyStartedAt.current = startedAt;
+            document.documentElement.dataset.keyProbeCapture = 'before-bubble';
             void afterNextPaint().then(() => {
               measurements.current.push(durationMeasurement(
                 'key-to-next-paint',
@@ -109,13 +139,28 @@ function PerformanceEditor() {
               ));
               resolve();
             });
-          }, { once: true });
+          }, { capture: true, once: true });
         });
       },
       async readKeyToNextPaint(): Promise<void> {
         if (!keyProbe.current) throw new Error('the key probe was not armed');
         await keyProbe.current;
         keyProbe.current = null;
+      },
+      async readDebouncedUpdate(): Promise<void> {
+        if (!debounceProbe.current) throw new Error('the debounce probe was not armed');
+        await debounceProbe.current;
+        debounceProbe.current = null;
+      },
+      measureSyncCheckpoint(): void {
+        const callbacksBefore = syncSubmitCallbacks.current;
+        const startedAt = performance.now();
+        const content = editor.getJSON();
+        sync.submitContent(content, corpus.envelope.meta, null);
+        measurements.current.push(durationMeasurement('sync-checkpoint-cpu', startedAt, 1));
+        if (syncSubmitCallbacks.current !== callbacksBefore + 1) {
+          throw new Error('sync checkpoint must invoke exactly one submit callback');
+        }
       },
       async measureScrollToBottom(): Promise<void> {
         const startedAt = performance.now();
@@ -157,6 +202,8 @@ function PerformanceEditor() {
             topLevelBlocks: corpus.topLevelBlocks,
             domNodeCount,
             longTaskCount: longTasks.length,
+            keyProbeCapturedBeforeBubble: keyProbeCapturedBeforeBubble.current,
+            syncSubmitCallbacks: syncSubmitCallbacks.current,
             ...(jsHeapUsedBytes === undefined ? {} : { jsHeapUsedBytes }),
           },
           measurements: [
@@ -178,7 +225,15 @@ function PerformanceEditor() {
   }, [corpus, editor, replaceEditorDocument]);
 
   return (
-    <main className="browser-performance-harness" data-corpus={corpus.name}>
+    <main
+      className="browser-performance-harness"
+      data-corpus={corpus.name}
+      onKeyDown={() => {
+        keyProbeCapturedBeforeBubble.current = document.documentElement.dataset.keyProbeCapture
+          === 'before-bubble';
+        delete document.documentElement.dataset.keyProbeCapture;
+      }}
+    >
       <EditorContent editor={editor} />
     </main>
   );

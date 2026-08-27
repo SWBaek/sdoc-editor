@@ -6,6 +6,8 @@ import type { PerformanceReport } from '../../../shared/performance/instrumentat
 interface BrowserPerformanceWindow {
   armKeyToNextPaint(): void;
   readKeyToNextPaint(): Promise<void>;
+  readDebouncedUpdate(): Promise<void>;
+  measureSyncCheckpoint(): void;
   measureScrollToBottom(): Promise<void>;
   measureNavigationToStart(): Promise<void>;
   report(jsHeapUsedBytes?: number): PerformanceReport;
@@ -32,6 +34,8 @@ test('measures the real Chromium editor path without an absolute-time gate', asy
   await page.evaluate(() => window.__sdocBrowserPerformance?.armKeyToNextPaint());
   await page.keyboard.type('x');
   await page.evaluate(() => window.__sdocBrowserPerformance?.readKeyToNextPaint());
+  await page.evaluate(() => window.__sdocBrowserPerformance?.readDebouncedUpdate());
+  await page.evaluate(() => window.__sdocBrowserPerformance?.measureSyncCheckpoint());
   await page.evaluate(() => window.__sdocBrowserPerformance?.measureNavigationToStart());
 
   const finalTextLength = await editor.evaluate((element) => element.textContent?.length ?? 0);
@@ -54,6 +58,8 @@ test('measures the real Chromium editor path without an absolute-time gate', asy
       surface: 'chromium-editor',
       browserEngine: 'chromium',
       corpus,
+      keyProbeCapturedBeforeBubble: true,
+      syncSubmitCallbacks: 1,
     },
   });
   expect(report.context.domNodeCount).toBeGreaterThan(report.context.topLevelBlocks as number);
@@ -62,9 +68,13 @@ test('measures the real Chromium editor path without an absolute-time gate', asy
     'open-to-editable-next-paint',
     'scroll-to-bottom-next-paint',
     'key-to-next-paint',
+    'debounced-update-wait',
+    'sync-checkpoint-cpu',
     'navigate-to-start-next-paint',
     'observed-long-task-total',
   ]);
+  expect(report.measurements.find(({ name }) => name === 'sync-checkpoint-cpu'))
+    .toMatchObject({ operationCount: 1, outcome: 'ok' });
   for (const measurement of report.measurements) {
     expect(Number.isFinite(measurement.durationMs)).toBe(true);
     expect(measurement.durationMs).toBeGreaterThanOrEqual(0);

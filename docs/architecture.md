@@ -163,8 +163,12 @@ The coordinator owns one immutable content snapshot and independent content,
 metadata, and document-settings revisions. Metadata-only and settings-only
 submissions reuse that exact content graph; local no-op detection uses the
 component revisions and owned snapshot identity without serializing or hashing
-the complete mutation. Parse-equal external representations remain a separate
-host-boundary comparison and continue to use the full semantic diff. A flush
+the complete mutation. Before creating editor JSON, the webview also compares
+the current immutable ProseMirror document with the last submitted or adopted
+document through `Node.eq()`. Thus an edit or formatting change fully reverted
+inside the debounce window creates no mutation. Parse-equal external
+representations remain a separate host-boundary comparison and continue to use
+the full semantic diff. A flush
 captures the already-submitted local generation and waits for its matching
 acknowledgement instead of recapturing editor JSON.
 An import is the exception to that reused-generation rule: after its silent

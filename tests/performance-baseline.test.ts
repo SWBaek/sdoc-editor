@@ -13,8 +13,19 @@ import {
   PERFORMANCE_DOCUMENT_NODE_LIMIT,
   PERFORMANCE_FIXTURE_SEED,
 } from './performance/fixtures';
+import { createEditorTransactionSample } from './performance/editorTransactionSample';
 
 describe('performance baseline corpora', () => {
+  it('starts every editor transaction sample from identical dimensions without accumulating state', () => {
+    const corpus = createAcceptedPerformanceCorpus('text-5k');
+    const first = createEditorTransactionSample(corpus)!;
+    const second = createEditorTransactionSample(corpus)!;
+    expect(first.before).toEqual(second.before);
+    first.run();
+    second.run();
+    expect(first.after()).toEqual(second.after());
+    expect(first.after()).toEqual(first.before);
+  });
   it('generates deterministic accepted corpora inside the persisted contract limits', () => {
     for (const name of acceptedPerformanceCorpusNames()) {
       const first = createAcceptedPerformanceCorpus(name);
