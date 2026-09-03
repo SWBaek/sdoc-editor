@@ -432,15 +432,11 @@ export function useEditorMessages({
           type: 'SET_DOC_SETTINGS',
           payload: snapshot.documentSettings,
         });
-        if (replaceEditorDocumentRef.current) {
-          replaceEditorDocumentRef.current('initial-load', snapshot.content);
-          initDoneRef.current = true;
-          dispatch({ type: 'SET_READY', payload: true });
-          publishAccess({ status: 'editable', capabilities: EDITABLE_CAPABILITIES });
-        } else {
-          dispatch({ type: 'SET_DOC', payload: snapshot.content });
-          publishAccess({ status: 'editable', capabilities: EDITABLE_CAPABILITIES });
-        }
+        // Let React commit the initialized document state before Tiptap creates
+        // document NodeViews. Diagram renderers then measure against the settled
+        // editor shell in the Editor initialization effect.
+        dispatch({ type: 'SET_DOC', payload: snapshot.content });
+        publishAccess({ status: 'editable', capabilities: EDITABLE_CAPABILITIES });
         break;
       case 'uiLanguageChanged':
         dispatch({
